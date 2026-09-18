@@ -771,10 +771,10 @@ function refresh(){
   let total=0,done=0;
   document.querySelectorAll('.it').forEach(it=>{let t=0,d=0;it.querySelectorAll('[data-k]').forEach(el=>{t++;const ok=el.value.trim()!=='';el.closest('.f').classList.toggle('filled',ok);if(ok)d++});const c=it.querySelector('h3 .cnt');if(c)c.textContent=d+'/'+t});
   document.querySelectorAll('.slide').forEach(sl=>{let t=0,d=0;sl.querySelectorAll('[data-k]').forEach(el=>{t++;if(el.value.trim())d++});total+=t;done+=d;
-    const c=sl.querySelector('[data-scnt]');if(c)c.textContent=`채움 ${d}/${t}`;const q=document.querySelector(`[data-qcnt="${sl.id}"]`);if(q)q.textContent=`${d}/${t}`});
+    const c=sl.querySelector('[data-scnt]');if(c)c.textContent=`입력 ${d}/${t}칸`;const q=document.querySelector(`[data-qcnt="${sl.id}"]`);if(q)q.textContent=`${d}/${t}`});
   document.querySelectorAll('.tabs button').forEach(b=>{const p=document.querySelector(`[data-panel="${b.dataset.tab}"]`);if(!p)return;let t=0,d=0;p.querySelectorAll('[data-k]').forEach(el=>{t++;if(el.value.trim())d++});b.classList.toggle('done',t>0&&d===t)});
   document.querySelectorAll('[data-ov]').forEach(b=>{const st=tabStat(b.dataset.ov);const lb=b.querySelector('b');if(lb)lb.textContent=st.d+'/'+st.t;b.classList.toggle('empty',st.d===0);b.classList.toggle('done',st.t>0&&st.d===st.t);b.classList.toggle('part',st.d>0&&st.d<st.t);let sp=b.querySelector('span');if(st.who){if(!sp){sp=document.createElement('span');b.appendChild(sp)}sp.textContent=st.who}else if(sp)sp.remove()});
-  document.getElementById('progress').textContent=`채움 ${done} / ${total}`;
+  document.getElementById('progress').textContent=`입력 ${done} / ${total}칸`;
 }
 function setStatus(t,c){const s=document.getElementById('status');s.textContent=t;s.className=c||''}
 
