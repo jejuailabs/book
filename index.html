@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>책 뼈대 펼침면 입력</title>
+<meta name="description" content="우리동네 AI클럽 책 뼈대 — 책 펼침면 모양의 장을 한 장씩 넘기며 내용을 채우는 입력 파일">
+<style>
+  :root{--navy:#1F2A44;--terra:#D9673A;--sage:#5E9C8A;--sand:#F3EDE3;--gold:#E9C46A;--paper:#FBF8F2;--ink:#2b2f38;--muted:#6b7280;--line:#DDD4C4;
+    --bg:#6e6a66;--bar:#1F2A44;--bar-ink:#fff;--field:#FFFDF8;--field-line:#D9CFBD;--warn:#92400e;--warn-soft:#FFF6D6;--good:#166534;--panel:#fff}
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#2a2d33;--bar:#0f1215;--panel:#1d2126}}
+  :root[data-theme="dark"]{--bg:#2a2d33;--bar:#0f1215;--panel:#1d2126}
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:"Pretendard","Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;font-size:15px;line-height:1.65;word-break:keep-all}
+
+  /* ---- 위 도구줄 + 바로가기 (조절 방식은 회의록 대시보드 참고) ---- */
+  .topwrap{position:sticky;top:0;z-index:40}
+  .toolbar{background:var(--bar);color:var(--bar-ink);display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:7px 14px;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+  .toolbar .name{font-weight:700;margin-right:4px;font-size:.95rem}
+  .toolbar button,.toolbar label.btn{font:inherit;font-size:.84rem;cursor:pointer;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.08);color:var(--bar-ink);border-radius:8px;padding:4px 10px}
+  .toolbar button:hover,.toolbar label.btn:hover{background:rgba(255,255,255,.2)}
+  .toolbar button.primary{background:var(--terra);border-color:var(--terra);font-weight:600}
+  .toolbar .right{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:.82rem}
+  #status.dirty{color:#fcd34d}
+  #progress{background:rgba(255,255,255,.12);padding:2px 9px;border-radius:6px}
+  .toolbar input[type=file]{display:none}
+  .quick{display:flex;flex-wrap:wrap;gap:5px 6px;padding:7px 14px;background:#3a3d44}
+  @media (max-width:880px){.topwrap{position:static}.quick a{font-size:12px;padding:2px 8px}}
+  .quick::-webkit-scrollbar{display:none}
+  .quick a{flex:none;font-size:12.5px;font-weight:600;color:#eee;text-decoration:none;padding:3px 10px;border-radius:999px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2)}
+  .quick a:hover{background:rgba(255,255,255,.25)}
+  .quick a.cur{background:var(--terra);border-color:var(--terra);color:#fff}
+  .quick a .n{opacity:.7;font-weight:500;margin-left:4px;font-size:11px}
+  .toolbar .sep{width:1px;height:18px;background:rgba(255,255,255,.25);margin:0 2px}
+  .scopebar{display:none;background:var(--gold);color:#3b2f00;padding:6px 14px;font-size:.88rem;gap:8px;align-items:center;flex-wrap:wrap}
+  .scopebar.show{display:flex}
+  .scopebar b{font-weight:800}
+  .dlg{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px}
+  .dlg[hidden]{display:none}
+  .dlgbox{background:var(--panel);color:var(--ink);border-radius:14px;padding:20px 22px;max-width:520px;width:100%;max-height:90vh;overflow:auto;box-shadow:0 10px 40px rgba(0,0,0,.4)}
+  :root[data-theme="dark"] .dlgbox{color:#e8e6e1}
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .dlgbox{color:#e8e6e1}}
+  .dlgbox h2{margin:0 0 6px;font-size:1.1rem}
+  .dlgbox p{margin:0 0 12px;font-size:.9rem;color:var(--muted)}
+  .dlglist{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;margin-bottom:14px}
+  @media (max-width:520px){.dlglist{grid-template-columns:1fr}}
+  .dlglist label{display:flex;gap:8px;align-items:center;font-size:.9rem;padding:4px 6px;border-radius:6px;cursor:pointer}
+  .dlglist label:hover{background:rgba(127,127,127,.12)}
+  .dlglist input{accent-color:var(--terra)}
+  .dlglist small{color:var(--muted);margin-left:auto;font-variant-numeric:tabular-nums}
+  .dlgmodes{display:flex;gap:6px;margin-bottom:10px}
+  .dlgmodes button{flex:1;font:inherit;font-size:.9rem;font-weight:600;padding:7px 8px;border-radius:8px;border:1.5px solid var(--line);background:transparent;color:inherit;cursor:pointer}
+  .dlgmodes button.on{background:var(--navy);border-color:var(--navy);color:#fff}
+  .dlgpane{display:none}.dlgpane.on{display:block}
+  .dlgopts{display:flex;gap:16px;flex-wrap:wrap;margin:-4px 0 12px;font-size:.88rem}
+  .dlgopts label{display:flex;gap:6px;align-items:center;cursor:pointer}
+  .dlgopts input{accent-color:var(--terra)}
+  .dlgfoot{margin:10px 0 0!important;font-size:.8rem!important}
+  .dlgbtns{display:flex;gap:8px;align-items:center}
+  .dlgbtns button{font:inherit;font-size:.88rem;padding:6px 12px;border-radius:8px;border:1px solid var(--line);background:transparent;color:inherit;cursor:pointer}
+  .dlgbtns button.primary{background:var(--terra);border-color:var(--terra);color:#fff;font-weight:600}
+  .notice{background:var(--warn-soft);color:var(--warn);padding:7px 14px;font-size:.88rem;display:none;gap:10px;align-items:center;flex-wrap:wrap}
+  .notice.show{display:flex}
+  .notice button{font:inherit;font-size:.84rem;padding:3px 10px;border-radius:6px;border:1px solid var(--warn);background:transparent;color:var(--warn);cursor:pointer}
+
+  /* ---- 장(슬라이드) ---- */
+  main{padding:18px 14px 110px}
+  .slide{display:none;max-width:1190px;margin:0 auto}
+  .slide.on{display:block}
+  body.all .slide{display:block;margin-bottom:40px}
+  .slide-h{display:flex;align-items:baseline;gap:12px;color:#eee;margin:0 4px 8px;flex-wrap:wrap}
+  .slide-h b{font-size:1.05rem}
+  .slide-h .cnt{font-size:.8rem;opacity:.8}
+  .spread{display:flex;gap:6px;align-items:stretch}
+  @media (max-width:880px){.spread{flex-direction:column}}
+  .pg{flex:1;min-width:0;background:var(--paper);color:var(--ink);position:relative;padding:38px 34px 46px;min-height:720px;box-shadow:0 2px 10px rgba(0,0,0,.35)}
+  .pg.left{box-shadow:inset -14px 0 18px -16px rgba(0,0,0,.35),0 2px 10px rgba(0,0,0,.35)}
+  .pg.right{box-shadow:inset 14px 0 18px -16px rgba(0,0,0,.35),0 2px 10px rgba(0,0,0,.35)}
+  .pg.sand{background:var(--sand)}
+  .pg.navy{background:var(--navy);color:#EEF1F6}
+  .folio{position:absolute;bottom:18px;font-size:10px;color:var(--muted);letter-spacing:.06em}
+  .left .folio{left:34px}.right .folio{right:34px}
+  .kicker{font-size:11px;letter-spacing:.16em;color:var(--terra);font-weight:700;text-transform:uppercase}
+  .navy .kicker{color:var(--gold)}
+  .h1{font-size:22px;font-weight:800;color:var(--navy);line-height:1.25;margin:4px 0 6px}
+  .spec{font-size:11.5px;color:var(--muted);margin:2px 0 8px;line-height:1.55;display:none}
+  body.show-spec .spec{display:block}
+  .spec b{color:var(--ink)}
+  .navy .spec{color:#B9C2D3}
+  .navy .spec b{color:#fff}
+  .it{margin:0 0 22px}
+  .it h3{margin:0;font-size:15px;font-weight:800;color:var(--navy);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .navy .it h3{color:#fff}
+  .it h3 .cnt{font-size:10.5px;color:var(--muted);font-weight:500;margin-left:auto}
+  .tag{display:inline-block;font-size:10px;font-weight:600;padding:0 6px;border-radius:6px;border:1px solid;vertical-align:middle}
+  .tag.check{color:var(--warn);border-color:var(--warn);background:var(--warn-soft)}
+  .tag.collect{color:#1d4ed8;border-color:#93c5fd;background:#eff6ff}
+
+  /* ---- 입력칸: 책 지면처럼 ---- */
+  .f{margin:7px 0}
+  .f label{display:block;font-size:11px;font-weight:700;color:var(--terra);margin-bottom:1px;letter-spacing:.02em}
+  .navy .f label{color:var(--gold)}
+  .f input[type=text]{width:100%;font:inherit;font-size:13.5px;color:var(--ink);background:transparent;border:0;border-bottom:1px dashed var(--field-line);padding:3px 2px}
+  .f textarea{width:100%;font:inherit;font-size:13px;line-height:1.7;color:var(--ink);background:var(--field);border:1px dashed var(--field-line);border-radius:6px;padding:7px 9px;min-height:54px;resize:vertical}
+  .navy .f input[type=text],.navy .f textarea{color:#EEF1F6;background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.3)}
+  .f input:focus,.f textarea:focus{outline:2px solid var(--terra);outline-offset:1px;border-color:transparent}
+  .f.filled input,.f.filled textarea{border-color:var(--sage)}
+  .f.filled textarea{background:#fff}
+  .navy .f.filled textarea{background:rgba(255,255,255,.1)}
+  .g2{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+  .g3{display:grid;grid-template-columns:repeat(3,1fr);gap:0 10px}
+  @media (max-width:560px){.g2,.g3{grid-template-columns:1fr}}
+  body.onlyempty .f.filled{display:none}
+
+  /* 탭(플레이어·팀·인터뷰·팁) */
+  .tabs{display:flex;gap:5px;flex-wrap:wrap;margin:0 4px 10px}
+  .tabs button{font:inherit;font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.1);color:#eee;cursor:pointer}
+  .tabs button.on{background:var(--terra);border-color:var(--terra);color:#fff}
+  .tabs button.done{border-color:#86efac}
+  .panel{display:none}.panel.on{display:block}
+
+  /* 표지 목업 */
+  .cover{background:var(--sand);padding:0;overflow:hidden}
+  .cover .band{height:12px;background:var(--navy)}
+  .cover .band2{position:absolute;bottom:0;left:0;right:0;height:8px;background:var(--terra)}
+  .cover .in{padding:44px 36px 0}
+  .cover input.big{width:100%;font:inherit;font-weight:900;font-size:36px;line-height:1.15;color:var(--navy);background:transparent;border:0;border-bottom:1px dashed transparent}
+  .cover input.big:hover,.cover input:hover{border-bottom-color:var(--field-line)}
+  .cover input.sub{width:100%;font:inherit;font-size:14px;font-weight:500;color:var(--navy);background:transparent;border:0;border-bottom:1px dashed transparent;margin-top:6px}
+  .cover input.small{width:100%;font:inherit;font-size:11px;letter-spacing:.2em;font-weight:700;color:var(--terra);background:transparent;border:0;border-bottom:1px dashed transparent}
+  .cover input.author{font:inherit;font-size:13px;font-weight:700;color:var(--navy);background:transparent;border:0;border-bottom:1px dashed transparent;width:100%}
+  .cover input:focus{outline:none;border-bottom-color:var(--terra)}
+  .cover .art{position:absolute;left:0;right:0;bottom:60px;text-align:center}
+  .cover .authorbox{position:absolute;left:36px;right:36px;bottom:28px}
+  .cover .hint{position:absolute;top:18px;right:14px;font-size:10px;color:var(--muted)}
+
+  /* 플레이어 카드 */
+  .pnum{display:flex;align-items:center;gap:8px}
+  .pnum b{font-size:38px;font-weight:900;color:var(--terra);line-height:1}
+  .pnum span{font-size:11px;color:var(--muted)}
+  .circle{border-radius:50%;background:linear-gradient(135deg,#e7dccb,#cdbfa8);display:flex;align-items:center;justify-content:center;color:#7a6a52;font-size:11px;text-align:center}
+  .card{border:1px solid var(--line);border-radius:10px;padding:8px 12px;background:#fff;margin:8px 0}
+  .card.navy{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .card.navy label{color:var(--gold)}
+  .card.navy input,.card.navy textarea{color:#fff;background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.3)}
+  .hexwrap{display:flex;justify-content:center;margin:4px 0}
+
+  /* ---- 장 아래: 추가 항목 · 의견 ---- */
+  .extras{display:grid;grid-template-columns:3fr 2fr;gap:6px;margin-top:6px}
+  @media (max-width:880px){.extras{grid-template-columns:1fr}}
+  .xtra{background:var(--paper);padding:22px 26px 26px;box-shadow:0 2px 10px rgba(0,0,0,.35);min-height:0}
+  .xtra .it{border-top:1px dashed var(--line);padding-top:10px}
+  .xtra .it:first-of-type{border-top:0;padding-top:0}
+  .xdel,.cdel{font:inherit;font-size:10.5px;color:var(--muted);background:transparent;border:1px solid var(--line);border-radius:6px;padding:0 7px;cursor:pointer}
+  .xdel:hover,.cdel:hover{color:#b91c1c;border-color:#b91c1c}
+  .addbtn{font:inherit;font-size:12.5px;font-weight:700;color:var(--terra);background:transparent;border:1.5px dashed var(--terra);border-radius:8px;padding:6px 12px;cursor:pointer;margin-top:4px}
+  .addbtn:hover{background:#fff1e8}
+  .cbox{background:#EEF1F6;color:var(--ink);padding:18px 20px;box-shadow:0 2px 10px rgba(0,0,0,.35)}
+  .cbox .kicker{color:var(--navy)}
+  .cm{background:#fff;border-radius:10px;padding:8px 11px;margin:8px 0;font-size:12.5px;line-height:1.55;border-left:3px solid var(--sage)}
+  .cm .who{font-weight:700;color:var(--navy)}
+  .cm .when{color:var(--muted);font-size:11px;margin-left:6px}
+  .cm .ref{display:inline-block;font-size:10.5px;color:var(--terra);background:#fff1e8;border-radius:6px;padding:0 6px;margin-left:6px}
+  .cm .cdel{float:right}
+  .cm p{margin:4px 0 0;white-space:pre-wrap}
+  .cform{margin-top:10px;display:grid;gap:6px}
+  .cform input,.cform select,.cform textarea{font:inherit;font-size:12.5px;color:var(--ink);background:#fff;border:1px solid #cfd6e0;border-radius:6px;padding:6px 8px}
+  .cform textarea{min-height:56px;resize:vertical}
+  .cform .row{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .cform button{font:inherit;font-size:12.5px;font-weight:700;color:#fff;background:var(--navy);border:0;border-radius:8px;padding:7px 12px;cursor:pointer;justify-self:end}
+  .empty{font-size:12px;color:var(--muted)}
+  @media print{.cform,.addbtn,.xdel,.cdel{display:none!important}.extras{display:block}.xtra,.cbox{box-shadow:none;break-inside:avoid}}
+
+  /* ---- 아래 고정 페이지 바 ---- */
+  .pager{position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;align-items:center;gap:10px;padding:8px 16px;background:var(--bar);color:var(--bar-ink);border-top:1px solid rgba(255,255,255,.15);box-shadow:0 -4px 16px rgba(0,0,0,.25)}
+  .pgbtn{font:inherit;font-size:14px;font-weight:700;padding:7px 14px;border-radius:999px;border:1.5px solid rgba(255,255,255,.35);background:transparent;color:#fff;cursor:pointer;white-space:nowrap}
+  .pgbtn:hover{border-color:#fff}
+  .pgbtn.primary{background:var(--terra);border-color:var(--terra)}
+  .pgbtn:disabled{opacity:.35;cursor:default}
+  .pgmid{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;line-height:1.3}
+  .pgt{font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  .pgn{font-size:12px;opacity:.75;font-variant-numeric:tabular-nums}
+  .pager label{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;cursor:pointer;user-select:none;white-space:nowrap}
+  .pager input{accent-color:var(--terra)}
+  body.all .pgbtn,body.all .pgmid{display:none}
+  @media (max-width:640px){.pager label span{display:none}}
+
+  @media print{
+    .toolbar,.quick,.pager,.notice,.slide-h,.tabs,.scopebar,.dlg{display:none!important}
+    body{background:#fff}
+    main{padding:0}
+    .slide{display:block!important;break-after:page}
+    .panel{display:block!important;break-inside:avoid}
+    .pg{box-shadow:none;min-height:0}
+    .spec{display:none!important}
+    .f input,.f textarea{border-color:transparent;background:transparent}
+    .f:not(.filled){display:none}
+  }
+</style>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+</head>
+<body class="show-spec">
+
+<div class="topwrap">
+<div class="toolbar">
+  <span class="name">책 뼈대 · 펼침면 입력</span>
+  <button id="btnSave" class="primary" title="Ctrl+S">파일로 저장</button>
+  <button id="btnMd">md로 내보내기</button>
+  <label class="btn" for="fileIn">다른 파일 불러오기</label><input type="file" id="fileIn" accept=".html,.json">
+  <button id="btnPrint">인쇄 / PDF</button>
+  <button id="btnEmpty">빈 칸만 보기</button>
+  <span class="sep"></span>
+  <button id="btnPart" title="사람별·팀별·장 단위로 필요한 부분만 든 작업 파일을 만듭니다">나눠서 따로 저장</button>
+  <label class="btn" for="mergeIn" title="따로 저장했던 파일의 내용을 이 파일에 합칩니다">부분 파일 합치기</label><input type="file" id="mergeIn" accept=".html,.json" multiple>
+  <div class="right"><span id="cloudUser" style="opacity:.85"></span><button id="btnLogin" title="Google로 로그인">로그인</button><span id="progress">0 / 0</span><span id="status">저장됨</span></div>
+</div>
+<div class="scopebar" id="scopebar"></div>
+<nav class="quick" id="quick" aria-label="바로가기"></nav>
+</div>
+<div class="notice" id="notice"></div>
+
+<div class="dlg" id="dlg" hidden>
+  <div class="dlgbox">
+    <h2>나눠서 따로 저장</h2>
+    <p>받는 사람에게 필요한 부분만 든 작업 파일을 만듭니다. 받은 사람은 채운 뒤 <b>파일로 저장</b>해서 돌려주고, 돌아온 파일은 <b>부분 파일 합치기</b>로 이 파일에 모읍니다.</p>
+    <div class="dlgmodes"><button type="button" data-mode="person">사람별로</button><button type="button" data-mode="team">팀별로</button><button type="button" data-mode="slide">장 단위로</button></div>
+    <div class="dlgpane" data-pane="person">
+      <p><b>한 사람당 파일 하나.</b> 그 사람의 플레이어 카드와 인터뷰만 담깁니다. 플레이어 03과 인터뷰 03은 같은 사람으로 봅니다.</p>
+      <div class="dlglist" id="dlgPersons"></div>
+      <div class="dlgopts"><label><input type="checkbox" id="incCard" checked> 플레이어 카드 담기</label><label><input type="checkbox" id="incIv" checked> 인터뷰 담기</label></div>
+    </div>
+    <div class="dlgpane" data-pane="team">
+      <p><b>한 팀당 파일 하나.</b> 그 팀의 결과물 8쪽만 담깁니다. 팀장에게 보낼 때 씁니다.</p>
+      <div class="dlglist" id="dlgTeams"></div>
+    </div>
+    <div class="dlgpane" data-pane="slide">
+      <p><b>고른 장을 파일 하나에.</b> WEEK 1처럼 장 전체를 한 사람에게 맡길 때 씁니다. 플레이어 카드·인터뷰 장을 고르면 11명이 모두 담깁니다.</p>
+      <div class="dlglist" id="dlglist"></div>
+    </div>
+    <div class="dlgbtns"><button id="dlgAll" type="button">모두</button><button id="dlgNone" type="button">모두 해제</button><span style="flex:1"></span><button id="dlgCancel" type="button">취소</button><button id="dlgGo" type="button" class="primary">내려받기</button></div>
+    <p class="dlgfoot">파일이 여러 개면 저장할 폴더를 한 번 고르게 됩니다(크롬·엣지). 다른 브라우저에서는 하나씩 내려받아집니다.</p>
+  </div>
+</div>
+
+<main id="app"></main>
+
+<div class="pager">
+  <button class="pgbtn" id="prev">◀ 이전</button>
+  <div class="pgmid"><div class="pgt" id="pgt"></div><div class="pgn" id="pgn"></div></div>
+  <button class="pgbtn primary" id="next">다음 ▶</button>
+  <label><input type="checkbox" id="allToggle"><span>전체 보기</span></label>
+  <label><input type="checkbox" id="specToggle" checked><span>설명 보기</span></label>
+</div>
+
+<script type="application/json" id="data">{}</script>
+<script type="application/json" id="scope">[]</script>
+<script>
+/* ============ 뼈대 정의 ============ */
+const T = (k,label,opt={}) => Object.assign({k,label,type:'text'},opt);
+const A = (k,label,opt={}) => Object.assign({k,label,type:'area'},opt);
+const CHECK='<span class="tag check">확인</span>', COLLECT='<span class="tag collect">수집</span>';
+
+const STATS = ['관찰력','기획력','구조화','실행력','AI 친숙도','딴지력'];
+const players = [];
+for (let i=1;i<=11;i++){
+  const n = String(i).padStart(2,'0');
+  players.push({id:'player'+n, title:'PLAYER '+n, group:'플레이어 카드 11장 '+COLLECT,
+    spec:'1인 1쪽 또는 펼침 2쪽. <b>설문 1·2·3번 답</b>을 옮겨 적고, 스탯·스킬·이미지는 스탯 시트로 따로 받음. 캐릭터 이미지는 각자 AI로 제작, 스타일 통일 안 함.',
+    fields:[
+      T('nick','닉네임 (설문 1)',{ph:'예: 루키'}), T('real','실명 병기',{ph:'○ / × (원하는 사람만)'}),
+      T('age','연령대 (설문 1)',{ph:'10대 / 20대 / 30대 / 40대 / 50대 / 60대 이상'}), T('home','사는 곳 (설문 1)',{ph:'예: 제주시 ○○동'}),
+      T('job','직업 / 하는 일 (설문 1)',{ph:'예: 자영업, 회사원, 예술가, 학생, 주부, 프리랜서'}), T('interest','관심 분야 (설문 1)',{ph:'예: AI, 디자인, 교육, 여행, 지역문제, 창업'}),
+      T('mbti','MBTI (선택, 설문 1)'),
+      T('start','참가 전 나의 모습 한 줄 (설문 3-1에서 뽑음)',{ph:'예: AI는 어렵다 / 나와는 상관없다 / 관심은 있었지만 막막했다'}),
+      A('why','참여 동기 한 문장 (설문 2)'),
+      A('worry','참여 전 고민 한 줄 (설문 3-2, 선택)',{ph:'예: 업무 효율화, 새로운 기술 학습, 진로 고민, 지역 문제 해결'}),
+      ...STATS.map((s,j)=>T('stat'+j, s+' (1~5)',{ph:'1~5', cls:'g3'})),
+      T('skill','고유 스킬 1~2개',{ph:'예: 현장 감지 +3, 질문 생성 +5'}),
+      T('img','캐릭터 이미지 파일명'),
+      T('team','팀',{ph:'오름 옆길 / AI 건강 비서 / 로컬 히어로'}),
+      A('tease','하단 예고 한 줄',{ph:'이 사람이 나중에 팀의 방향을 바꾼 한마디 (본문 장면과 연결)'}),
+      T('qr','QR 링크 (선택)'), T('agree','사진·직업 공개 동의',{ph:'○ / ×'})
+    ]});
+}
+
+const TEAMS = [
+  {key:'oreum', name:'오름 옆길', known:'오름 + 주변을 잇는 2~3시간 코스 제안. 봄·여름·가을·겨울, 시간대별 오름 모습 아카이빙. 문제: 제주 오름 368개 중 1년 내내 오를 수 있는 곳은 40~50개. 오름만 오르고 내려오기엔 아쉽다.'},
+  {key:'health', name:'AI 건강 비서', known:'일상 건강 데이터를 쉽게 기록하고 AI가 정리해 쉽게 꺼내 보는 도구. 문제: 나이 들수록 병원·처방 기록이 늘어나는데 한 달 전 어느 병원, 무슨 처방이었는지 기억 못 한다.'},
+  {key:'hero', name:'로컬 히어로', known:'소상공인 / 영업사원 / 일반인 3가지 로그인. 사장님 사진 + 대표 메뉴 사진으로 AI 홍보 이미지 자동 생성. 고객 관리(상담 내역·등급·방문 알림). 소상공인 소통방. 정부 지원사업 AI 정리. 계기: 보험 영업사원 폰의 80여 명 소상공인 단체방.'}
+];
+const teamItems = TEAMS.map(t => ({id:'team-'+t.key, title:t.name+' (8쪽)', group:'세 팀의 결과물 '+COLLECT,
+  spec:'<b>이미 아는 것(9/15 발표):</b> '+t.known,
+  fields:[
+    T('members','팀원'), T('mission','한 문장 미션'),
+    A('p1','1쪽 · 팀 소개 / 구성원 스탯'),
+    A('p23','2~3쪽 · 문제가 발견된 실제 장면',{ph:'누구의 어떤 문제였나. 어디서, 누가 무슨 말을 했나'}),
+    A('p4','4쪽 · 문제 정의와 흐름 그림',{ph:'지금 하는 방식(AS-IS) → AI가 들어간 뒤(TO-BE). 그림 파일명'}),
+    A('p56','5~6쪽 · 첫 프로토타입과 실패',{ph:'처음엔 뭘 만들려고 했나 / 중간에 가장 크게 바뀐 결정 / 오류 캡처 파일명'}),
+    A('p7','7쪽 · 최종 화면 Before & After',{ph:'사람이 하던 일이 어떻게 달라졌나. AI가 잘한 일 vs 사람이 해야 했던 일'}),
+    A('p8','8쪽 · 팀의 회고',{ph:'소감·느낀 점·실천할 점 / 다음에 고치고 싶은 것 (방식은 팀 자율: 글, 대담, 만화)'}),
+    A('toteam','8쪽 · 팀원에게 전하는 말 (설문 6-1 팀별 모음)',{ph:'닉네임: 한마디 (한 줄에 하나)'}),
+    T('link','결과물 링크 (QR용)'),
+    A('words','방향을 바꾼 결정적 한마디 3개',{ph:'누가, 언제, 뭐라고'})
+  ]}));
+
+/* 참여자 인터뷰 설문지(6영역 12문항)와 1:1. 설문 원문을 그대로 옮겨 적는다. 1번 기본 정보는 플레이어 카드에 */
+const IQ = [
+  ['s2','2. 참여 동기 — 이번 우리동네 AI클럽에 참여하게 된 이유는?'],
+  ['s31','3-1. 참가 전 — AI에 대해 참여하기 전에는 어떤 생각을 가지고 있었나요?','예: 어렵다, 나와는 상관없다, 관심은 있었지만 막막했다'],
+  ['s32','3-2. 참가 전 — 스스로의 상황이나 고민이 있었다면?','예: 업무 효율화, 새로운 기술 학습, 진로 고민, 지역 문제 해결'],
+  ['s41','4-1. 활동 중 — 가장 기억에 남는 순간은 언제인가요?','예: 처음 아이디어를 냈을 때, 팀원과 토론했을 때, 개발에 성공했을 때, 발표할 때'],
+  ['s42','4-2. 활동 중 — 가장 어려웠던 점은 무엇이었나요?','예: 기술적인 부분, 시간 부족, 팀과의 소통, 아이디어 구체화'],
+  ['s43','4-3. 활동 중 — 그 어려움을 어떻게 극복했나요?','예: 팀원과 함께, 강의나 자료를 찾아서, 반복 연습, 다른 사람의 도움'],
+  ['s51','5-1. 변화와 배움 — 이번 활동을 통해 가장 크게 달라진 점은?','예: AI에 대한 이해, 새로운 가능성 발견, 자신감, 사람들과의 연결'],
+  ['s52','5-2. 변화와 배움 — 이번 경험이 앞으로의 나에게 어떤 의미가 있을 것 같나요?'],
+  ['s61','6-1. 마지막 한마디 — 함께한 팀원들에게 전하고 싶은 말'],
+  ['s62','6-2. 마지막 한마디 — 앞으로 도전해 보고 싶은 것','예: 더 큰 서비스 만들기, 다른 분야에 AI 적용하기, 지역에서의 활동']
+];
+const interviews = [];
+for (let i=1;i<=11;i++){
+  const n=String(i).padStart(2,'0');
+  interviews.push({id:'iv'+n, title:'참여자 인터뷰 '+n, group:'CH 13. 11명의 마지막 인터뷰 — 설문 2~6번 원문 '+COLLECT,
+    spec:'설문지 답을 <b>원문 그대로</b> 옮겨 적는다. 책에는 1인 1~2쪽, 강한 문장 하나를 제목으로. 각 답이 가는 자리: 3-1→플레이어 카드·변화 한 장(왼쪽) / 4-1→해당 주차 본문 / 4-2·4-3→WEEK 3 CH 9 / 5-1→변화 한 장(오른쪽)·뒤표지 인용 후보 / 6-1→팀 회고 / 6-2→각자의 다음 계획',
+    fields:[ T('who','누구 (닉네임)'), T('team','팀'), T('headline','제목으로 뽑을 한 문장 (답 중에서 고름)'),
+      ...IQ.map(q=>A(q[0], q[1], {ph:q[2]||''})),
+      A('editor','편집 메모',{ph:'어느 장에 어느 답을 쓸지, 인용 후보 문장 등'}) ]});
+}
+
+const BOOK = [
+ {id:'cover', title:'0. 표지', items:[
+  {id:'cover-front', title:'앞표지', spec:'그림 콘셉트: 11명이 하나의 테이블을 둘러싸고, 테이블 위 포스트잇·노트북·커피·휴대폰이 선으로 이어져 하나의 작은 서비스 화면이 된다. AI를 직접 그리지 않는다. 로봇·회로·네온블루·빛나는 뇌 금지. 색: 미색 바탕(#F3EDE3)에 테라코타(#D9673A)·네이비(#1F2A44) 포인트.',
+   fields:[T('title','제목',{def:'AI로 어디까지 가능할까?'}), T('sub','부제',{def:'제주 동네 사람 11명이 벌인 4주간의 AI 실험'}), T('author','저자 표기 '+CHECK,{def:'우리동네 AI클럽 지음'}), T('small','작은 글씨',{def:'동네 AI 실험실 기록 · 2026'}), A('art','표지 그림 메모 / 시안 파일명')]},
+  {id:'cover-spine', title:'책등', spec:'제목 / 부제 한 줄 / 우리동네 AI클럽', fields:[T('text','책등 문구')]},
+  {id:'cover-back', title:'뒤표지', spec:'큰 카피 한 줄 + 소개문 5~6줄 + 숫자 한 줄 + 참여자 인용 2개 + 3팀 QR',
+   fields:[T('copy','큰 카피 한 줄',{def:'코딩을 배운 이야기가 아니다. 우리가 무엇까지 만들 수 있는지 알아본 이야기다.'}),
+     A('intro','소개문 5~6줄',{ph:'당근 모임에서 만난 트럭운전사·AI강사·개발자·영업사원·예술가. 4주, 3개 팀, 3개의 문제…'}),
+     T('numbers','숫자 한 줄 '+CHECK,{def:'11명 · 28일 · 3개의 문제 · [ ]만원 · 3개의 결과물'}),
+     A('quotes','참여자 한 문장 인용 2개 '+COLLECT,{ph:'예: 저는 원래 이런 걸 만드는 사람이 아니라고 생각했어요.'}),
+     T('qr','3팀 결과물 QR 링크')]},
+  {id:'cover-flap1', title:'앞날개', spec:'모임 소개 6~8줄 + 대표 집필자 소개 3줄',
+   fields:[A('club','우리동네 AI클럽 소개 '+CHECK,{ph:'당근마켓 모임에서 시작, 약 5개월, 회원 [160/170]명, 매주 목요일 AI 기초 스터디 + 토요일 바이브코딩 모임 4시간'}), A('author','대표 집필자 소개 3줄 '+COLLECT)]},
+  {id:'cover-flap2', title:'뒷날개', spec:'다음 시즌 예고 3줄 + 참여·문의 QR',
+   fields:[A('next','다음 시즌 예고',{ph:'2기 준비 중. 시스템의 성공인지, 사람 관계의 성공인지 검증하러 갑니다.'}), T('qr','당근 모임 링크')]},
+  {id:'cover-band', title:'띠지 카피 (있을 경우)', spec:'후보: "트럭 운전사도, 예술가도, 사무직도 AI 앞에서는 모두 처음이었다." / "누군가 만들어주면 좋겠다 → 우리가 한번 만들어볼까?" / "AI는 일부 전문가의 것이 아니라, 우리 모두의 도구입니다."(설문지 문구)',
+   fields:[A('copy','띠지 카피 후보')]},
+  {id:'cover-lines', title:'장 사이 한 줄 문구 (설문지 문구)', spec:'부 표지나 장 끝 여백에 손글씨 느낌으로. 설문지와 책의 말투를 맞추는 장치.',
+   fields:[T('l1','PART 0 앞',{def:'당신의 이야기가, 누군가의 시작이 될 수 있습니다.'}), T('l2','WEEK 1 또는 AI TOOL BOX 01 옆',{def:'좋은 질문이, 좋은 변화를 만듭니다.'}), T('l3','WEEK 3 앞',{def:'조금 서툴러도 괜찮아요. 여기, 함께 배우는 사람들이 있으니까요.'}), T('l4','에필로그 마지막 쪽 옆',{def:'당신의 이야기가, 제주에서 더 많은 가능성을 만듭니다.'}), T('sub2','부제 후보 2',{def:'흔한 사람들이, 조금 특별한 4주를 만든 이야기'})]}
+ ]},
+ {id:'front', title:'1. 앞부분 (격식 구간)', pages:'4~6쪽', items:[
+  {id:'front-colophon', title:'속표지 · 판권', spec:'발행일, 발행처, 참여자 11명 이름(닉네임 기본, 실명은 원하는 사람만), 지원: 제주사회적경제지원센터 띵크살롱, 디자인·편집',
+   fields:[T('date','발행일'), T('pub','발행처'), A('names','참여자 11명 표기 순서·이름'), T('design','디자인·편집')]},
+  {id:'front-foreword', title:'발간사 '+COLLECT, spec:'위성곤 제주도지사. 1~2쪽', fields:[A('text','발간사 원문',{ph:'받은 원문 그대로 붙여 넣기'}), T('status','진행 상태',{ph:'요청 보냄 / 회신 대기 / 받음'})]},
+  {id:'front-rec', title:'추천사 '+COLLECT, spec:'제주사회적경제지원센터 / 핑크발롱. 1~2쪽', fields:[A('rec1','추천사 1 (센터)'), A('rec2','추천사 2 (핑크발롱)'), T('status','진행 상태')]},
+  {id:'front-bg', title:'이 책이 나오기까지 (한 쪽)', spec:'하정우 전 청와대 AI미래기획수석의 「제주 AX 대전환」 강연과 「마이크로 솔루션」 이야기 → 띵크살롱 지원 → 11명, 4주, 3팀. 여기까지만 격식체.',
+   fields:[A('text','본문 초안')]}
+ ]},
+ {id:'prologue', title:'2. 프롤로그 — 나는 왜 동네 사람들과 AI 실험을 시작했을까', pages:'10쪽', intro:'대표 집필자 1인칭. 전문성을 보여 주는 자리가 아니라 "왜 시작할 수밖에 없었나"를 보여 주는 자리.', items:[
+  {id:'pro1', title:'1. 내가 먼저 AI를 배운 이유', spec:'개인 홈페이지 리뉴얼이라는 개인적 필요 '+CHECK+'. 개발자가 아닌 운영자로서 AI를 처음 만난 경험. "내가 쓰는 방식이 남에게도 도움이 될까?"', fields:[A('text','원고')]},
+  {id:'pro2', title:'2. 당근에 모임을 만들었다', spec:'AI를 어떻게 배워야 할지 막막한 사람들의 문턱을 낮추려고 시작. 이미지·영상·PPT·상세페이지를 같이 만들어 본 과정. 바이브코딩 모임으로 확장. 회원 '+CHECK+'명이 되며 확인한 것: "배우고 싶지만 혼자는 어려운 사람들"', fields:[A('text','원고')]},
+  {id:'pro3', title:'3. [ ]만원짜리 4주 실험 '+CHECK, spec:'띵크살롱 선정. "가볍게 접근해도 되는 건가?" 싶었던 첫 느낌. 11명·4주·3팀. 미션: 실제 문제를 AI로 풀어 보자', fields:[A('text','원고')]},
+  {id:'pro4', title:'4. 40대가 넘으면 사라지는 것', spec:'9/15 발표에서 한 말. "20대 때 족구처럼, 언제든 할 수 있을 줄 알았던 성취의 기회가 점점 사라진다. 이걸 하면서 그 감각을 다시 맛봤다." 프롤로그의 감정적 출발점', fields:[A('text','원고')]}
+ ]},
+ {id:'part0', title:'3. PART 0. 실험실의 사람들', pages:'18쪽', items:[
+  ...players,
+  {id:'rules', title:'우리의 실험 규칙 (1쪽)', spec:'1. 문제는 자기 주변에서 찾는다. 2. 해결책보다 문제를 먼저 검증한다. 3. AI가 만든 결과를 정답으로 취급하지 않는다. 4. 팀원 모두가 결과물을 설명할 수 있어야 한다.', fields:[A('text','규칙 확정 문안 / 덧붙일 규칙')]},
+  {id:'problems', title:'3개 팀, 3개의 문제 (2쪽)', spec:'팀 이름 · 문제 한 줄 · 팀원',
+   fields:[A('oreum','오름 옆길 — 문제 한 줄 + 팀원',{def:'제주 오름 368개 중 1년 내내 오를 수 있는 곳은 40~50개. 오름만 오르고 내려오기엔 아쉬운 사람들에게 오름 + 주변을 잇는 2~3시간 코스가 없다.\n팀원: '}),
+     A('health','AI 건강 비서 — 문제 한 줄 + 팀원',{def:'나이 들수록 병원·처방 기록이 늘어나는데 "한 달 전에 어느 병원, 무슨 처방이었지?"를 기억 못 한다. 의료 데이터는 있지만 일반인이 꺼내 보기 어렵다.\n팀원: '}),
+     A('hero','로컬 히어로 — 문제 한 줄 + 팀원',{def:'보험·자동차 영업사원의 고객은 동네 소상공인. 소상공인이 가장 어려워하는 건 마케팅인데, 영업사원이 도울 방법이 뻔하다.\n팀원: '})]}
+ ]},
+ {id:'week1', title:'4. PART 1 · WEEK 1. 문제를 찾다', pages:'28쪽', items:[
+  {id:'w1c1', title:'CH 1. 불편한 게 없다는 게 가장 큰 문제였다', spec:'첫 만남의 어색함, 자기소개. "요즘 뭐가 불편하세요?" 앞의 침묵. 사소한 불편이 문제 후보가 되는 과정. 팀별 첫 반응: "나는 뭐 하러 왔나" / "저는 잘 모르겠는데요" / "우리 이거 할 시간이 있나". 재료: 설문 3-1(참여 전 AI 생각)·3-2(참여 전 고민)', fields:[A('text','원고 / 장면 메모'), A('survey','설문 3-1·3-2에서 가져올 답 (닉네임: 요지)'), T('photo','사진 파일명')]},
+  {id:'w1conv', title:'CONVERSATION 01 — 처음 나온 엉뚱한 아이디어들 '+COLLECT, spec:'첫 주 아이디어 전부. 누가 뭐라고 했는지 + 편집자 주석', fields:[A('text','대화 재구성'), A('note','편집자 주석 (이 한마디 때문에 무엇이 바뀌었나)')]},
+  {id:'w1c2', title:'CH 2. 아이디어보다 관찰이 먼저다', spec:'문제와 아이디어의 차이. 생활에서 문제를 찾는 관찰 포인트 5가지. 말 많은 사람과 말 없는 사람을 모두 끌어내는 진행', fields:[A('text','원고'), A('points','관찰 포인트 5가지')]},
+  {id:'w1lab', title:'LAB NOTE 01 — 문제 후보 카드 '+COLLECT, spec:'포스트잇·화이트보드 사진', fields:[A('list','문제 후보 전체 목록'), T('photo','사진 파일명')]},
+  {id:'w1c3', title:'CH 3. 11개의 생각을 3개의 문제로 좁히다', spec:'비슷한 문제 묶기, 누구의 문제인지 확인, "정말 필요한가?" 검증 질문. <b>탈락한 아이디어 전부와 탈락 이유</b>(여과 없이). 팀 편성: 서로 다른 스탯을 섞는 법', fields:[A('text','원고'), A('dropped','탈락한 아이디어와 이유 '+COLLECT), A('teaming','팀이 짜인 과정')]},
+  {id:'w1tool', title:'AI TOOL BOX 01 — AI에게 묻기 전에 사람에게 묻는다', spec:'퍼실리테이션이란 무엇인가. 인터뷰 질문 만들기, AI로 인터뷰 정리하기, 문제 진술문 한 문장 만들기. 왼쪽 1쪽 개념 + 오른쪽 1쪽 실제 장면 + QR', fields:[A('concept','개념 (아주 짧게)'), A('scene','실제 장면'), T('qr','QR 링크')]},
+  {id:'w1iv', title:'인터뷰 01 — "처음엔 회의적이었어요" '+COLLECT, spec:'질문 1개 + 답 3~4명', fields:[A('text','질문과 답')]},
+  {id:'w1end', title:'1주차를 마치며 — 문제는 찾았는데, 그다음은?', spec:'', fields:[A('text','원고')]},
+  {id:'w1lv', title:'LEVEL UP 01', spec:'관찰력 +12 / 질문력 +8 / AI 이해도 +3. 팀별 "이번 주 가장 좋은 딴지"', fields:[A('ddanji','이번 주 가장 좋은 딴지 (팀별)')]}
+ ]},
+ {id:'week2', title:'5. PART 2 · WEEK 2. 문제를 정의하다', pages:'28쪽', items:[
+  {id:'w2c4', title:'CH 4. "그래서 정확히 뭐가 문제죠?"', spec:'팀마다 다르게 이해하고 있던 문제. 사용자·상황·행동·불편을 분리하기. 좋은 문제 정의와 나쁜 문제 정의 비교. 팀 장면: "알림 하나만 더 넣자"라는 타협 / 앞서가는 사람과 따라가는 사람 / 평일 저녁, 다시 모이다', fields:[A('text','원고'), A('scenes','팀별 장면 메모')]},
+  {id:'w2conv', title:'CONVERSATION 02 — 방향이 뒤집힌 한마디 '+COLLECT, spec:'팀별 결정적 한마디 + 편집자 주석', fields:[A('text','대화 재구성'), A('note','편집자 주석')]},
+  {id:'w2c5', title:'CH 5. 해결책을 만들기 전에 흐름을 그리다', spec:'지금 하는 방식(AS-IS)과 AI가 들어간 뒤(TO-BE). 어디까지 자동화하고 어디서 사람이 판단할지. 흐름을 읽는 사람이 팀에서 갖는 힘', fields:[A('text','원고')]},
+  {id:'w2lab', title:'LAB NOTE 02 — 팀별 프로세스 그림 '+COLLECT, spec:'', fields:[T('files','그림 파일명 (팀별)'), A('memo','메모')]},
+  {id:'w2c6', title:'CH 6. 문제를 AI가 알아들을 문서로 번역하다', spec:'MD 파일이 필요한 이유. 목표 / 사용자 / 기능 / 데이터 / 화면 / 예외상황. 모호한 요구를 테스트 가능한 문장으로. 실제 문서 Before & After', fields:[A('text','원고'), A('before','MD 초기본 (발췌) '+COLLECT), A('after','MD 최종본 (발췌) '+COLLECT)]},
+  {id:'w2kakao', title:'카톡방 재구성 — 밤 11시, 아무도 답이 없던 순간들 '+COLLECT, spec:'공개 가능한 부분만', fields:[A('text','대화 재구성')]},
+  {id:'w2zoom', title:'자정 회의록 — 새벽까지 이어진 줌 (2팀·3팀) '+COLLECT, spec:'', fields:[A('text','회의록 재구성')]},
+  {id:'w2tool', title:'AI TOOL BOX 02 — MD 파일은 프롬프트가 아니다', spec:'README·PRD·Design.md의 역할을 초보자 관점에서. "한 번에 다 만들지 말고 단계별로 맡기기". QR: 실제 템플릿', fields:[A('concept','개념'), A('scene','실제 장면'), T('qr','템플릿 QR 링크')]},
+  {id:'w2iv', title:'인터뷰 02 — "처음 봤을 때 진짜 막막했어요" '+COLLECT, spec:'', fields:[A('text','질문과 답')]},
+  {id:'w2end', title:'2주차를 마치며 — 이제 뭘 만들지는 확실해졌다', spec:'', fields:[A('text','원고')]},
+  {id:'w2lv', title:'LEVEL UP 02', spec:'구조화 +18 / 설명력 +10 / 팀 합의 +7', fields:[A('ddanji','이번 주 가장 좋은 딴지')]}
+ ]},
+ {id:'week3', title:'6. PART 3 · WEEK 3. AI에게 만들어 보라고 했다', pages:'36쪽', items:[
+  {id:'w3c7', title:'CH 7. 이제 진짜 만들어 봅시다', spec:'PC에 무엇이 필요한지 최소 개념만. 프로젝트 폴더를 열고 AI 코딩 도구에 문서를 건네는 장면. 첫 명령을 내리는 법. <b>설치조차 안 되던 사람 — ○○의 노트북 사투기</b> '+CHECK+'. 처음으로 AI에게 말을 걸다', fields:[A('text','원고'), T('who','노트북 사투기의 주인공 (닉네임/실명 확인)'), A('story','노트북 사투기 장면')]},
+  {id:'w3class', title:'바이브코딩 5분 교실', spec:'코드 에디터 / 터미널 / Git / 배포가 각각 무슨 역할인지. Claude Code 등 도구는 "선택지"로만. 설치법은 QR로', fields:[A('text','원고'), T('qr','설치 안내 QR 링크')]},
+  {id:'w3c8', title:'CH 8. 놀랍게도 뭔가가 만들어졌다', spec:'첫 프로토타입 화면. 화면에 뜬 첫 화면, 팀 전체의 탄성. "AI가 다 해 주는 것 같다"는 착각이 생기는 순간', fields:[A('text','원고'), T('photo','첫 화면 캡처 파일명')]},
+  {id:'w3c9', title:'CH 9. 물론 바로 되지는 않았다', spec:'로그인이 안 됨 / 버튼이 안 눌림 / 데이터가 안 들어감 / 모바일이 깨짐. 오류 화면과 팀원 대화. 문제를 재현하고 한 번에 하나씩 고치기. AI가 틀렸을 때 사람이 확인해야 하는 것. <b>○○의 한마디가 뚫어낸 밤</b> '+CHECK+'. <b>새벽 1시 47분, 배포에 성공한 밤</b>. 시간이 없어서 오히려 빨리 배운 사람들. 재료: 설문 4-2(어려웠던 점)·4-3(극복)', fields:[A('text','원고'), T('who','한마디가 뚫어낸 밤의 주인공 (확인)'), A('night','새벽 1시 47분 장면'), A('errors','오류 목록 (증상 / 원인 / 어떻게 설명했나 / 어떻게 고쳤나)'), A('survey','설문 4-2·4-3에서 가져올 답 (닉네임: 요지)')]},
+  {id:'w3fail', title:'실패/디버깅 펼침면', spec:'깨진 화면 캡처를 크게. "우리가 본 증상 / 실제 원인 / 어떻게 설명했는가 / 어떻게 고쳤는가"', fields:[T('photo','캡처 파일명 '+COLLECT), A('text','4칸 내용')]},
+  {id:'w3tool', title:'AI TOOL BOX 03 — 디버깅은 고치는 기술보다 설명하는 기술이다', spec:'빨간 글씨가 떴을 때. 증상 적는 법, 재현 조건·기대 결과·실제 결과, 스크린샷과 로그를 AI에게 주는 법', fields:[A('concept','개념'), A('scene','실제 장면')]},
+  {id:'w3iv', title:'인터뷰 03 — "그 순간 어떤 기분이었어요?" '+COLLECT, spec:'', fields:[A('text','질문과 답')]},
+  {id:'w3end', title:'3주차를 마치며 — 좌절과 성공 사이, 우리가 배운 것', spec:'', fields:[A('text','원고')]},
+  {id:'w3lv', title:'LEVEL UP 03', spec:'실행력 +20 / 실패 내성 +15 / "왜?" 질문 +9', fields:[A('ddanji','이번 주 가장 좋은 딴지')]}
+ ]},
+ {id:'week4', title:'7. PART 4 · WEEK 4. 세상에 내놓다', pages:'30쪽', items:[
+  {id:'w4c10', title:'CH 10. "내 컴퓨터에서는 되는데요?"', spec:'로컬과 배포의 차이. 웹에 올렸을 때 처음 만나는 문제. 도메인·데이터·모바일 확인', fields:[A('text','원고')]},
+  {id:'w4tool', title:'AI TOOL BOX 04 — 배포는 무엇을 하는 걸까', spec:'Vercel(세상에 내보내기) · Firebase→Supabase(로그인과 데이터베이스) · Git/GitHub(되돌릴 수 있다는 안도감)를 제품명이 아니라 역할로. 사용자에게 보여 주기 전 체크리스트', fields:[A('concept','개념'), A('scene','실제 장면'), A('checklist','보여 주기 전 체크리스트')]},
+  {id:'w4c11', title:'CH 11. 우리가 만든 것을 우리가 설명하다', spec:'발표 전날 밤, 각자의 준비. 발표 자료 만들기. 기능이 아니라 문제-과정-변화를 설명하기. 최종 리허설과 마지막 수정', fields:[A('text','원고')]},
+  {id:'w4c12', title:'CH 12. 28일째, 세 개의 결과물이 켜졌다', spec:'1팀·2팀·3팀 무대 위에서. 심사위원의 질문, 관객의 반응. 첫날과 마지막 날의 표정 차이. "직접 만든 사람"이 된 순간', fields:[A('text','원고'), A('qa','심사위원 질문과 답'), T('photo','발표 사진 / 첫날·마지막날 단체 사진 파일명')]},
+  {id:'w4party', title:'뒤풀이 — 4주를 돌아보며 나온 진짜 이야기 '+COLLECT, spec:'', fields:[A('text','원고')]},
+  {id:'w4iv', title:'인터뷰 04 — "발표 끝나고 어떤 생각이 들었어요?" '+COLLECT, spec:'', fields:[A('text','질문과 답')]},
+  {id:'w4end', title:'4주차를 마치며 — 우리가 만든 건 앱이 아니라 자신감이었다', spec:'', fields:[A('text','원고')]},
+  {id:'w4lv', title:'LEVEL UP 04', spec:'문제해결 +25 / AI 리터러시 +22 / "나도 만들 수 있음" +∞', fields:[A('ddanji','이번 주 가장 좋은 딴지')]}
+ ]},
+ {id:'part5', title:'8. PART 5. 세 팀의 결과물', pages:'24쪽 (팀당 8쪽)', intro:'화면 캡처 나열이 아니라 "문제 → 결정 → 실패 → 수정 → 결과"의 미니 다큐멘터리. 세 팀 모두 같은 8쪽 구성.', items: teamItems},
+ {id:'part6', title:'9. PART 6. 그리고 사람이 남았다', pages:'20쪽', items:[
+  ...interviews,
+  {id:'numbers', title:'CH 14. 숫자로 본 28일 '+CHECK, spec:'', fields:[
+    T('n1','참가자',{def:'11명'}), T('n2','기간',{def:'28일'}), T('n3','팀',{def:'3개'}), T('n4','예산 (100/150만원)'),
+    T('n5','개발 경험자 수'), T('n6','평균 연령'), T('n7','문제 후보 수'), T('n8','탈락 아이디어 수'), T('n9','자정 넘긴 회의 횟수'), T('n10','회원 수 (160/170명)'), A('etc','그 밖의 숫자')]},
+  {id:'toteam', title:'팀원에게 전하는 말 (반 쪽 × 3팀)', spec:'설문 6-1 답을 팀별로 모아 한 덩어리로. PART 5 각 팀 8쪽에 넣어도 되고 여기 모아도 됨', fields:[A('t1','오름 옆길'), A('t2','AI 건강 비서'), A('t3','로컬 히어로')]},
+  {id:'change', title:'CH 15. 변화 한 장', spec:'태도 변화와 능력 변화를 한 장에 (참가 전 나의 모습 ↔ 지금). <b>왼쪽에 설문 3-1 답 11개, 오른쪽에 설문 5-1 답 11개</b>를 나란히 놓으면 이 장이 된다. 프로젝트가 된 이유: "모이자는 의지는 다른 모임도 같았지만, 실제 작업까지 간 건 여기뿐" (설문 4-3에 "팀원과 함께"가 많으면 그 근거). AI 리터러시를 기능을 많이 아는 것이 아니라 문제를 구조화하고 AI 결과를 검증하며 동료와 일을 나누는 능력으로 다시 정의', fields:[A('before','왼쪽 · 참가 전 (설문 3-1 한 줄씩 11개)',{ph:'닉네임: 한 줄'}), A('after','오른쪽 · 지금 (설문 5-1 한 줄씩 11개)',{ph:'닉네임: 한 줄'}), A('text','원고'), A('why','프로젝트가 된 이유')]},
+  {id:'nextplans', title:'각자의 다음 계획', spec:'설문 6-2 "앞으로 도전해 보고 싶은 것" 11명 한 줄씩', fields:[A('text','닉네임: 한 줄 (11개)')]},
+  {id:'lastline', title:'이 부의 마지막 문장', spec:'', fields:[A('text','문장',{def:'예전에는 "누가 이런 걸 만들어 주면 좋겠다"고 생각했다. 이제는 먼저 "우리가 한번 만들어 볼까?"라고 묻게 됐다.'})]}
+ ]},
+ {id:'epilogue', title:'10. 에필로그 — 이제 당신 차례입니다', pages:'8쪽', items:[
+  {id:'ep-close', title:'저자의 클로징', spec:'대표 집필자 마무리 글. 다음 시즌 예고 (2기)', fields:[A('text','원고')]},
+  {id:'ep-7day', title:'7일짜리 작은 AI 실험', spec:'DAY 1 주변의 불편 10개 찾기 → DAY 2 하나 골라 왜 문제인지 적기 → DAY 3 당사자 3명에게 물어보기 → DAY 4 문제 정의와 현재 흐름 그리기 → DAY 5 AI에게 줄 MD 문서 만들기 → DAY 6 첫 프로토타입 → DAY 7 누군가에게 보여 주고 다시 고치기', fields:[A('text','각 DAY 설명 문안')]},
+  {id:'ep-check', title:'독자를 위한 첫걸음 체크리스트 (한 쪽)', spec:'당신도 지금 시작할 수 있다', fields:[A('text','체크리스트 항목')]},
+  {id:'ep-last', title:'마지막 쪽', spec:'', fields:[A('text','문장',{def:'우리는 AI 전문가가 되지 않았다. 대신 무언가 불편한 것을 발견했을 때, 누군가를 기다리지 않고 한번 만들어 볼 수 있는 사람이 되었다.\n\n당신의 동네에는 어떤 문제가 있습니까?'})]}
+ ]},
+ {id:'appendix', title:'11. 부록', pages:'12쪽', items:[
+  {id:'apA', title:'A. 3팀 솔루션 링크 & QR', spec:'각 QR + 한 줄 설명', fields:[T('l1','오름 옆길 링크'), T('l2','AI 건강 비서 링크'), T('l3','로컬 히어로 링크'), A('desc','한 줄 설명 3개')]},
+  {id:'apB', title:'B. 초심자를 위한 미니 용어사전', spec:'바이브코딩, MD 파일, 프롬프트, 터미널, 배포, Vercel, DB, Supabase, Git, GitHub, 디버깅, 로컬, API, 토큰 등 30개 안팎. 한 단어에 두 줄', fields:[A('text','용어 : 설명 (한 줄에 하나)')]},
+  {id:'apC', title:'C. AI TOOL BOX·팁 박스 전체 목록', spec:'쪽 번호와 함께. 바이브코딩 흐름(문제 발견 → 정의 → MD → 제작 → 디버깅 → 배포)이 한눈에', fields:[A('text','목록 (조판 후 쪽 번호 기입)')]},
+  {id:'apD', title:'D. 참여자 QR 페이지 '+COLLECT, spec:'원하는 사람만. 홈페이지·성과물·SNS 링크', fields:[A('text','닉네임 : 링크 (한 줄에 하나)')]},
+  {id:'apE', title:'E. 디지털 자료실 QR', spec:'설치 안내 최신판, MD 템플릿, 문제 정의 템플릿, 인터뷰 질문지, 발표 자료 템플릿, 인터뷰 확장판', fields:[T('url','자료실 주소'), A('list','올릴 자료 목록')]}
+ ]},
+ {id:'tips', title:'12. 팁 박스 (본문 사이 자유 배치, 10개 안팎)', intro:'개인 AI 활용 에피소드·팁. 운전하며 작업, 노션 연동, 클로드가 "자라"고 한 이야기, 30분 늦고도 막힘없이 강의한 방장님 등. 프로젝트 밖 경험도 OK. 반 쪽짜리 작은 박스.', items:
+  Array.from({length:10},(_,i)=>({id:'tip'+(i+1), title:'팁 박스 '+(i+1)+' '+COLLECT, spec:'', fields:[T('who','누구'), T('title','제목'), A('text','에피소드 / 팁'), T('where','넣을 자리 (예: WEEK 3 CH 9 뒤)')]}))
+ }
+];
+
+
+
+/* ============ 장 구성 (어느 항목을 어느 쪽에 놓는가) ============ */
+const pad=i=>String(i).padStart(2,'0');
+const SLIDES=[
+ {id:'cover', title:'표지', custom:'cover'},
+ {id:'front', title:'앞부분 · 발간사·추천사', left:['front-colophon','front-foreword'], right:['front-rec','front-bg']},
+ {id:'prologue', title:'프롤로그', left:['pro1','pro2'], right:['pro3','pro4']},
+ {id:'players', title:'PART 0 · 플레이어 카드', tabs:Array.from({length:11},(_,i)=>({id:'player'+pad(i+1),label:'P'+pad(i+1)})), custom:'player'},
+ {id:'part0b', title:'PART 0 · 규칙과 3개의 문제', left:['rules'], right:['problems']},
+ {id:'week1', title:'WEEK 1 · 문제를 찾다', left:['w1c1','w1c2','w1c3','w1end'], right:['w1conv','w1lab','w1tool','w1iv','w1lv'], rightCls:''},
+ {id:'week2', title:'WEEK 2 · 문제를 정의하다', left:['w2c4','w2c5','w2c6','w2end'], right:['w2conv','w2lab','w2kakao','w2zoom','w2tool','w2iv','w2lv']},
+ {id:'week3', title:'WEEK 3 · AI에게 만들어 보라고 했다', left:['w3c7','w3c8','w3c9','w3end'], right:['w3class','w3fail','w3tool','w3iv','w3lv']},
+ {id:'week4', title:'WEEK 4 · 세상에 내놓다', left:['w4c10','w4c11','w4c12','w4end'], right:['w4tool','w4party','w4iv','w4lv']},
+ {id:'teams', title:'PART 5 · 세 팀의 결과물', tabs:[{id:'team-oreum',label:'오름 옆길'},{id:'team-health',label:'AI 건강 비서'},{id:'team-hero',label:'로컬 히어로'}], split:{left:['members','mission','p1','p23','p4'], right:['p56','p7','p8','toteam','link','words']}},
+ {id:'interviews', title:'PART 6 · 11명의 인터뷰', tabs:Array.from({length:11},(_,i)=>({id:'iv'+pad(i+1),label:'인터뷰 '+pad(i+1)})), split:{left:['who','team','headline','s2','s31','s32','s41'], right:['s42','s43','s51','s52','s61','s62','editor']}},
+ {id:'part6b', title:'PART 6 · 숫자·변화·다음 계획', left:['numbers','toteam'], right:['change','nextplans','lastline']},
+ {id:'epilogue', title:'에필로그', left:['ep-close','ep-7day'], right:['ep-check','ep-last']},
+ {id:'appendix', title:'부록', left:['apA','apB'], right:['apC','apD','apE']},
+ {id:'tips', title:'팁 박스 10개', tabs:Array.from({length:10},(_,i)=>({id:'tip'+(i+1),label:'팁 '+(i+1)})), split:{left:['who','title','where'], right:['text']}},
+];
+const SHORT={cover:'표지',front:'앞부분',prologue:'프롤로그',players:'플레이어 카드',part0b:'규칙·3문제',week1:'WEEK 1',week2:'WEEK 2',week3:'WEEK 3',week4:'WEEK 4',teams:'팀 결과물',interviews:'인터뷰',part6b:'숫자·변화',epilogue:'에필로그',appendix:'부록',tips:'팁 박스'};
+const ITEMS={}; for(const p of BOOK) for(const it of p.items) ITEMS[it.id]=it;
+const TOOLBOX=new Set(['w1tool','w2tool','w3tool','w4tool','w3class']);
+const COVER_ITEMS=['cover-front','cover-back','cover-spine','cover-flap1','cover-flap2','cover-band','cover-lines'];
+function slideItemIds(s){return s.custom==='cover'?COVER_ITEMS:(s.tabs?s.tabs.map(t=>t.id):[...(s.left||[]),...(s.right||[])])}
+const itemSlide={}; for(const s of SLIDES) for(const id of slideItemIds(s)) itemSlide[id]=s.id;
+/* 추가 항목(x-장-고유번호)과 의견(c-장-고유번호)은 뼈대 밖 항목. 어느 장 것인지는 id에서 읽는다 */
+const slideOf=id=>itemSlide[id]||((/^[xc]-/.test(id))?id.split('-')[1]:undefined);
+const knownItem=id=>!!ITEMS[id]||/^[xc]-[a-z0-9]+-[a-z0-9]+$/.test(id);
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+
+/* ============ 상태 ============ */
+/* SCOPE: 이 파일이 "부분 작업 파일"이면 담긴 장의 id 목록. 비어 있으면 전체 파일 */
+let SCOPE=[]; try{SCOPE=JSON.parse(document.getElementById('scope').textContent||'[]')||[]}catch(e){SCOPE=[]}
+/* 항목 모양: "week1"(장 전체) 또는 "players:player03"(그 장의 탭 하나) */
+SCOPE=SCOPE.filter(e=>{const [sid,tid]=String(e).split(':');const s=SLIDES.find(x=>x.id===sid);return s&&(!tid||(s.tabs&&s.tabs.some(t=>t.id===tid)))});
+const scopeSlideIds=[...new Set(SCOPE.map(e=>e.split(':')[0]))];
+const TABF={};for(const e of SCOPE){const [sid,tid]=e.split(':');if(tid&&TABF[sid]!==null)(TABF[sid]=TABF[sid]||new Set()).add(tid)}
+for(const e of SCOPE){const [sid,tid]=e.split(':');if(!tid)TABF[sid]=null}
+const ACTIVE=SCOPE.length?SLIDES.filter(s=>scopeSlideIds.includes(s.id)):SLIDES;
+const tabsOf=s=>(s.tabs&&TABF[s.id])?s.tabs.filter(t=>TABF[s.id].has(t.id)):s.tabs;
+const activeItemIds=s=>s.tabs?tabsOf(s).map(t=>t.id):slideItemIds(s);
+function itemInScope(id,list){if(!list||!list.length)return true;const sid=slideOf(id);for(const e of list){const [s,tb]=String(e).split(':');if(s!==sid)continue;if(!tb||/^[xc]-/.test(id)||tb===id)return true}return false}
+function scopeLabel(){return ACTIVE.map(s=>{const tb=s.tabs&&TABF[s.id]?' ('+tabsOf(s).map(x=>x.label).join(', ')+')':'';return (SHORT[s.id]||s.title)+tb}).join(' / ')}
+const LS=SCOPE.length?'bookslides.part.'+SCOPE.join('_').replace(/:/g,'-')+'.':'bookslides.';
+let DATA={}; try{DATA=JSON.parse(document.getElementById('data').textContent||'{}')||{}}catch(e){DATA={}}
+let dirty=false;
+const load=k=>{try{return localStorage.getItem(LS+k)}catch(e){return null}};
+const save=(k,v)=>{try{localStorage.setItem(LS+k,v)}catch(e){}};
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+const key=(item,f)=>item.id+'.'+f.k;
+const val=(item,f)=>{const v=DATA[key(item,f)];return v!==undefined?v:(f.def||'')};
+const fld=(item,k)=>item.fields.find(f=>f.k===k);
+
+/* ============ 예시 문구 (빈 칸에 회색으로 보이고, 쓰기 시작하면 사라짐. 저장되지 않음) ============ */
+const EX={
+ 'cover-front.art':'예: 11명이 하나의 테이블을 둘러싸고, 테이블 위 메모·노트북·커피가 작은 앱 화면으로 이어지는 장면. 시안 파일: 표지_v1.png',
+ 'cover-spine.text':'예: AI로 어디까지 가능할까?  ·  우리동네 AI클럽',
+ 'cover-back.qr':'예: https://oreum-side.vercel.app (3팀 링크가 모인 페이지 하나)',
+ 'cover-flap1.author':'예: 당근 모임 우리동네 AI클럽 방장. 낮에는 ○○ 일을 하고, 밤에는 바이브코딩. 내 홈페이지를 고치려다 AI를 배웠다.',
+ 'cover-flap2.qr':'예: 당근 모임 주소 https://…',
+ 'cover-band.copy':'예: 트럭 운전사도, 예술가도, 사무직도 AI 앞에서는 모두 처음이었다.',
+ 'front-colophon.date':'예: 2026년 11월 1일', 'front-colophon.pub':'예: 우리동네 AI클럽 (비매품)',
+ 'front-colophon.names':'예: 아재, 루키, 파란, 트니맘, 민아, … (닉네임 기본, 실명은 원하는 사람만 괄호로)',
+ 'front-colophon.design':'예: 표지·본문 디자인 루키 / 편집 ○○ / 지원 제주사회적경제지원센터 띵크살롱',
+ 'front-rec.rec1':'예: 받은 원문 그대로 붙여 넣기. 아직 없으면 "9/20 요청, ○○ 담당"처럼 진행 상황만 적어 두세요.',
+ 'front-rec.rec2':'예: 받은 원문 그대로 붙여 넣기.',
+ 'front-bg.text':'예: 2026년 초, 하정우 전 청와대 AI미래기획수석이 제주를 찾아 \'제주 AX 대전환\'을 이야기했다. 그날 나온 \'마이크로 솔루션\'이라는 말이 이 실험의 출발점이 됐다. 제주사회적경제지원센터 띵크살롱의 지원으로, 열한 명이 세 팀을 이뤄 4주를 보냈다. (격식체, 한 쪽)',
+ 'pro1.text':'예: 시작은 거창하지 않았다. 내 홈페이지를 고치고 싶었을 뿐이다. 개발자가 아닌 운영자가 AI를 처음 만났을 때 생기는 일은 비슷하다. 되는 것 같다가, 안 된다. 그때 처음 든 질문이 이것이었다. 내가 쓰는 이 방식이 다른 사람에게도 도움이 될까.',
+ 'pro2.text':'예: 처음엔 한 명이었다. 이미지, 영상, PPT, 상세페이지. 각자 필요한 걸 같이 만들어 보다가 사람이 늘었다. 160명이 되면서 알게 된 것 하나. 배우고 싶은데 혼자서는 시작을 못 하는 사람이 정말 많다는 것.',
+ 'pro3.text':'예: 띵크살롱에 선정됐다는 연락을 받았을 때 든 생각은 "이렇게 가볍게 접근해도 되는 건가"였다. 조건은 단순했다. 11명, 4주, 3팀. 실제 문제를 AI로 풀어 보자.',
+ 'pro4.text':'예: 20대 때 족구처럼, 언제든 할 수 있을 줄 알았던 성취의 기회가 마흔이 넘으면서 점점 사라졌다. 이걸 하면서 그 감각을 다시 맛봤다.',
+ 'rules.text':'예: 뼈대의 4개 규칙을 그대로 쓰고, 팀에서 정한 규칙이 더 있으면 5번부터 적기. "5. 자정 넘으면 자기 전에 카톡에 한 줄 남긴다"',
+ 'w1c1.text':'예: 첫 토요일, 사회적경제지원센터 3층. 서로의 이름보다 닉네임이 먼저 익숙한 사람들이 긴 테이블에 앉았다. 자기소개는 짧았다. 트럭을 몬다는 사람, 그림을 가르친다는 사람, 보험을 판다는 사람. "요즘 뭐가 불편하세요?" 진행자가 물었을 때 열한 명은 3초쯤 아무 말도 하지 않았다.',
+ 'w1c1.survey':'예: 루키: AI에 질문은 해 봤는데 만든다는 건 남의 일 / 민아: 어렵다, 였어요 / 파란: 관심은 있는데 막막',
+ 'w1conv.text':'예:\n아재: 일단 다 뱉어 봅시다. 걸러내는 건 나중에.\n트니맘: 제주 날씨 예보가 자꾸 틀려요. 이거 AI로 되나요?\n아재: 됩니다. 근데 우리가 4주 안에 기상청을 이길 수 있을까요? (웃음)\n루키: 오름 갔다가 정상만 찍고 내려오는 게 아까워요.',
+ 'w1conv.note':'예: 이날 나온 11개 중 8개가 탈락했다. "제주 날씨 예보"는 우리가 이길 수 없는 문제로, "주차장 찾기"는 이미 있는 앱이 더 잘한다는 이유로.',
+ 'w1c2.text':'예: 아이디어는 "이런 앱이 있으면 좋겠다"이고, 문제는 "누가 언제 무엇 때문에 불편한가"다. 진행자는 질문을 바꿨다. "어제 하루 중에 \'아 이거 귀찮다\' 한 순간이 언제였어요?"',
+ 'w1c2.points':'예: ① 어제 귀찮았던 순간 ② 매번 다시 찾는 것 ③ 남에게 설명하다 막힌 것 ④ 종이에 적어 두는 것 ⑤ 누가 대신 해 주면 좋겠다 싶은 것',
+ 'w1lab.list':'예:\n#1 병원·처방 기록을 매번 다시 찾는다 — 선정\n#2 오름 정상만 찍고 내려온다 — 선정\n#3 거래처 사장님 가게 홍보가 늘 똑같다 — 선정\n#4 제주 날씨 예보가 틀린다 — 탈락\n…',
+ 'w1c3.text':'예: 열한 장의 포스트잇을 벽에 붙이고 비슷한 것끼리 묶었다. 세 가지를 물었다. 누구의 문제인가, 정말 필요한가, 4주 안에 되는가. 세 칸이 다 체크된 것만 남았다.',
+ 'w1c3.dropped':'예: 제주 날씨 예보 → 우리가 이길 수 없는 문제 / 시내 주차장 찾기 → 이미 있는 앱이 더 잘함 / 수강생 도안 만들기 → 한 사람 문제, 나중에 개인 프로젝트로',
+ 'w1c3.teaming':'예: 문제를 낸 사람 + 그 문제를 겪는 사람 + 만들 수 있는 사람이 한 팀이 되게. 개발 경험자 2명은 서로 다른 팀으로.',
+ 'w1tool.concept':'예: 퍼실리테이션은 "답을 주는 기술"이 아니라 "말이 나오게 하는 기술"이다. 말 많은 사람의 말을 줄이고, 말 없는 사람의 말을 꺼낸다. (두세 문장)',
+ 'w1tool.scene':'예: "어제 하루 중 귀찮았던 순간"으로 질문을 바꾸자 포스트잇이 움직였다. 각자 인터뷰 질문 3개를 만들어 옆 사람에게 물었고, 그 답을 AI에게 정리시켜 문제 진술문 한 문장을 만들었다.',
+ 'w1iv.text':'예:\nQ. 처음엔 어땠어요?\n루키: 회의적이었어요. 4주에 뭘 만들겠나 싶었죠.\n민아: 저는 그냥 구경하러 왔어요.\n파란: 시간이 되나 그게 걱정이었어요.',
+ 'w1end.text':'예: 문제는 세 개로 좁혀졌다. 그런데 그다음이 막막했다. "그래서 이걸 어떻게 만들죠?"라는 질문에 아무도 답하지 못한 채 첫 주가 끝났다.',
+ 'w1lv.ddanji':'예: 오름 옆길 — "오름 이름부터 넣지 말고, 걷는 시간부터 넣자" (루키) / AI 건강 비서 — "병원 이름은 누가 입력해요?" (민아)',
+ 'w2c4.text':'예: 같은 팀인데 문제를 다르게 이해하고 있었다. 한 사람은 "기록"을, 한 사람은 "알림"을 생각했다. 사용자·상황·행동·불편으로 나눠 다시 적자 두 문장이 됐다.',
+ 'w2c4.scenes':'예: 오름 옆길 — "알림 하나만 더 넣자"는 타협 / AI 건강 비서 — 앞서가는 사람과 따라가는 사람 / 로컬 히어로 — 평일 저녁, 다시 모이다',
+ 'w2conv.text':'예:\n루키: 오름 이름부터 넣지 말고, 걷는 시간부터 넣자.\n트니맘: 그럼 데이터를 다시 짜야 하는데요?\n루키: 그래도 그게 사람들이 진짜 고르는 기준이에요.',
+ 'w2conv.note':'예: 이 한마디로 첫 화면이 "오름 목록"에서 "시간 고르기"로 바뀌었다.',
+ 'w2c5.text':'예: 지금은 블로그 세 개를 읽고 감으로 걷는다. AI가 들어가면 오름과 시간을 고르고 코스 세 개를 받는다. 어디까지 자동으로 하고 어디서 사람이 고를지를 화살표로 그렸다.',
+ 'w2lab.files':'예: 오름옆길_흐름.png, 건강비서_흐름.png, 로컬히어로_흐름.png',
+ 'w2lab.memo':'예: 화이트보드 사진을 그대로 쓸지, 다시 그릴지',
+ 'w2c6.text':'예: "앱 만들어 줘"로는 아무것도 안 나왔다. 목표, 사용자, 기능, 데이터, 화면, 예외상황. 여섯 칸을 채우자 AI가 처음으로 우리가 원하는 걸 만들기 시작했다.',
+ 'w2c6.before':'예: "오름 앱 만들어 줘. 코스 추천도 되고 사진도 올리게."',
+ 'w2c6.after':'예:\n목표: 오름과 주변을 잇는 2~3시간 코스를 추천한다\n사용자: 오름을 한 달에 두 번 이상 가는 사람\n기능: 1) 오름·계절·시간 고르기 2) 코스 3개 제안 3) 사진 아카이브\n데이터: 오름 40곳의 이름·위치·소요시간\n화면: 고르기 → 결과 → 사진\n예외: 데이터 없는 오름을 고르면 "준비 중" 표시',
+ 'w2kakao.text':'예:\n[23:11] 민아: 로그인이 안 돼요…\n[23:40] (아무도 답이 없음)\n[00:02] 아재: 지금 봤어요. 화면 캡처 올려 주세요.\n[00:05] 민아: (캡처)',
+ 'w2zoom.text':'예: 9/○○ (목) 23:30~01:10 줌. 참석: 루키, 트니맘, ○○. 정한 것: 첫 화면은 시간 고르기. 미룬 것: 사진 업로드는 3주차로. 다음 모임: 토요일 14시.',
+ 'w2tool.concept':'예: MD 파일은 프롬프트가 아니라 설명서다. README는 "이게 뭔지", PRD는 "무엇을 만들지", Design.md는 "어떻게 보일지". 한 번에 다 만들지 말고 단계별로 맡긴다.',
+ 'w2tool.scene':'예: 로컬 히어로 팀은 로그인 세 종류를 한 문서에 다 적었다가, 소상공인용부터 따로 떼어 만들었다.',
+ 'w2iv.text':'예:\nQ. 문서를 처음 봤을 때?\n트니맘: 진짜 막막했어요. 영어도 아니고 한글인데 무슨 말인지.\n파란: 그런데 칸이 있으니까 채우게 되더라고요.',
+ 'w2end.text':'예: 이제 뭘 만들지는 확실해졌다. 세 팀 모두 문서 한 장씩을 손에 쥐고 2주차를 마쳤다. 만들기는 다음 주부터다.',
+ 'w2lv.ddanji':'예: 로컬 히어로 — "사장님이 사진을 올릴 시간이 있을까요?" (파란)',
+ 'w3c7.text':'예: 프로젝트 폴더를 열고, AI 코딩 도구에 문서를 건넸다. 첫 명령은 한 줄이었다. "이 문서대로 첫 화면을 만들어 줘." 그리고 기다렸다.',
+ 'w3c7.who':'예: 도영 (실명인지 닉네임인지 본인 확인)',
+ 'w3c7.story':'예: 설치 화면에서 세 번 막혔다. 첫 번째는 관리자 권한, 두 번째는 경로에 한글, 세 번째는 이유를 아직도 모른다. 네 번째에 됐다.',
+ 'w3class.text':'예: 코드 에디터는 글 쓰는 공책, 터미널은 명령을 내리는 창, Git은 되돌리기 버튼, 배포는 세상에 내보내기. 도구 이름은 선택지일 뿐이고 설치법은 QR로.',
+ 'w3c8.text':'예: 화면에 뭔가가 떴다. 버튼 하나, 제목 하나. 그런데 팀 전체가 탄성을 질렀다. 그 순간 "AI가 다 해 주는구나"라는 착각이 시작됐다.',
+ 'w3c9.text':'예: 물론 바로 되지는 않았다. 로그인이 안 되고, 버튼이 안 눌리고, 데이터가 안 들어가고, 휴대폰에서는 깨졌다. 한 번에 하나씩. 오류 문장을 그대로 복사해서 물었다.',
+ 'w3c9.who':'예: 태석 (실명인지 닉네임인지 본인 확인)',
+ 'w3c9.night':'예: 23:41 하얀 화면 → 00:30 오류 문장 복사해 AI에게 → 01:20 환경변수라는 걸 알게 됨 → 01:47 화면이 떴다. 카톡방에 "떴다!!!" 세 명이 동시에.',
+ 'w3c9.errors':'예:\n증상: 내 컴퓨터에서는 되는데 올리니까 하얀 화면 / 원인: 비밀 키를 배포 서버에 안 넣음 / 설명: 오류 문장 그대로 복사 + "로컬은 되는데 배포하면 이렇게" / 해결: Vercel 환경변수 두 줄',
+ 'w3c9.survey':'예: 민아: 팀원들이 하는 말을 못 알아듣는 거요 → 물어보면 다 설명해 줬어요',
+ 'w3fail.text':'예: 우리가 본 증상 / 실제 원인 / 어떻게 설명했는가 / 어떻게 고쳤는가 — 네 칸을 각각 한두 문장으로',
+ 'w3tool.concept':'예: 디버깅은 고치는 기술보다 설명하는 기술이다. 무엇을 했더니(재현 조건), 무엇이 나올 줄 알았는데(기대), 무엇이 나왔다(실제). 이 세 줄과 캡처를 주면 AI가 대부분 찾는다.',
+ 'w3tool.scene':'예: "안 돼요"라고만 쓰면 AI도 사람도 못 도와준다. 민아가 처음으로 세 줄로 써서 올린 날, 10분 만에 풀렸다.',
+ 'w3iv.text':'예:\nQ. 그 순간 어떤 기분이었어요?\n루키: 소리 질렀어요. 새벽 두 시에.\n트니맘: 내가 만든 게 아닌 것 같은데 내가 만든 거라서 이상했어요.',
+ 'w3end.text':'예: 좌절과 성공 사이를 하루에도 몇 번씩 오갔다. 배운 건 기술이 아니라, 안 되는 걸 안 된다고 말하는 법이었다.',
+ 'w3lv.ddanji':'예: "그거 AI가 만든 게 아니라 우리가 시킨 거잖아요. 뭘 시켰는지 우리가 설명 못 하면 안 만든 거예요." (3팀 ○○, 목요일 밤 줌)',
+ 'w4c10.text':'예: "내 컴퓨터에서는 되는데요?" 세 팀이 같은 말을 했다. 웹에 올리는 순간 처음 만나는 문제들. 주소, 데이터, 휴대폰 화면.',
+ 'w4tool.concept':'예: Vercel은 세상에 내보내는 곳, Supabase는 로그인과 저장 창고, GitHub는 되돌릴 수 있는 기록. 제품 이름이 아니라 역할로 기억하면 도구가 바뀌어도 된다.',
+ 'w4tool.scene':'예: 로컬 히어로 팀이 Firebase에서 Supabase로 옮긴 이유는 딱 하나, 구글 로그인이 한 번에 됐기 때문이다.',
+ 'w4tool.checklist':'예: ☐ 휴대폰에서 열어 봤나 ☐ 로그인 안 한 상태로 열어 봤나 ☐ 일부러 틀린 값을 넣어 봤나 ☐ 남에게 링크만 주고 설명 없이 써 보게 했나',
+ 'w4c11.text':'예: 발표 전날 밤. 기능을 자랑하는 대신 문제-과정-변화 순서로 3분을 짰다. 리허설에서 두 번 시간을 넘겼고, 마지막 수정은 발표 30분 전이었다.',
+ 'w4c12.text':'예: 28일째. 세 개의 화면이 차례로 켜졌다. 첫날 어색하던 표정과 발표 뒤의 표정을 같은 자리에서 찍었다.',
+ 'w4c12.qa':'예: Q. 오름 데이터는 어디서 가져왔나요? — 루키: 직접 다닌 40곳부터 넣었습니다. Q. 사장님들이 진짜 쓸까요? — 파란: 이미 두 분이 쓰고 계세요.',
+ 'w4party.text':'예: 발표가 끝나고 고깃집. "솔직히 2주차에 그만두려고 했어요"라는 고백이 세 명에게서 나왔다.',
+ 'w4iv.text':'예:\nQ. 발표 끝나고 어떤 생각이 들었어요?\n민아: 이제 뭐든 시켜 볼 수 있겠다.\n아재: 다음엔 모르는 사람 11명으로 해 보고 싶다.',
+ 'w4end.text':'예: 우리가 만든 건 앱이 아니라 자신감이었다. 세 개의 화면보다 오래 남을 것은, "우리가 한번 만들어 볼까?"라고 먼저 말하게 된 습관이다.',
+ 'w4lv.ddanji':'예: "발표에서 기능 자랑 그만하고 왜 만들었는지부터 말해요." (○○)',
+ 'team-oreum.members':'예: 루키(스케치·코스), 트니맘(오름 데이터), ○○(개발), ○○(검수)',
+ 'team-oreum.mission':'예: 오름 하나 오르고 내려오기엔 아쉬운 사람에게, 오름과 그 옆을 잇는 두세 시간짜리 길을 제안한다',
+ 'team-health.members':'예: 민아(문제 제기·검수), ○○(개발), ○○(화면)',
+ 'team-health.mission':'예: "한 달 전에 어느 병원, 무슨 처방이었지?"를 30초 안에 꺼내 준다',
+ 'team-hero.members':'예: 파란(영업 현장·기획), ○○(개발), ○○(사장님 인터뷰)',
+ 'team-hero.mission':'예: 영업사원이 동네 사장님의 홍보와 고객 관리를 10분 안에 도와준다',
+ 'team-oreum.p1':'예: 팀 소개 두세 문장 + 팀원 스탯 요약 (누가 무엇을 맡았나)',
+ 'team-oreum.link':'예: https://oreum-side.vercel.app',
+ 'toteam.t1':'예: 루키: 새벽에 같이 있어 줘서 고마웠어요 / 트니맘: 내가 딴지 걸 때마다 들어 줘서 고마워요',
+ 'numbers.n4':'예: 150만원 (센터 공문 확인)', 'numbers.n5':'예: 2명', 'numbers.n6':'예: 44세', 'numbers.n7':'예: 11개', 'numbers.n8':'예: 8개', 'numbers.n9':'예: 3회', 'numbers.n10':'예: 170명 (당근 모임 화면 확인)',
+ 'numbers.etc':'예: 카톡 메시지 2,140개 / 커피 47잔 / 자정 넘긴 밤 6일',
+ 'change.text':'예: 태도는 "누가 만들어 주면"에서 "우리가 만들어 볼까"로, 능력은 "질문만"에서 "문서 쓰고 시키고 확인하기"로. 왼쪽과 오른쪽 열을 나란히 놓고 한 문단으로 묶는다.',
+ 'change.why':'예: 모이자는 의지는 다른 모임도 같았지만, 실제 작업까지 간 건 여기뿐이었다. 이유는 셋. 매주 같은 시간, 문제를 먼저 고른 것, 그리고 방장의 열정.',
+ 'nextplans.text':'예:\n민아: 엄마 약 기록부터 우리 집에서 진짜로 써 보기\n루키: 수강생 도안 앱 완성\n파란: 사장님 다섯 분 더 등록',
+ 'ep-close.text':'예: 4주가 끝났지만 실험은 끝나지 않았다. 2기는 서로 모르는 사람들로 시작한다. 이게 시스템의 성공인지 사람 관계의 성공인지 확인하러 간다.',
+ 'ep-7day.text':'예: DAY 1 주변의 불편 10개 찾기 — 어제 하루 중 귀찮았던 순간부터 / DAY 2 하나를 고르고 왜 문제인지 적기 — 내 문제인가, 남의 문제인가 / …',
+ 'ep-check.text':'예: ☐ 불편한 것 하나를 종이에 적었다 ☐ 당사자 한 명에게 물어봤다 ☐ 지금 하는 방식을 그림으로 그렸다 ☐ AI에게 줄 문서 여섯 칸을 채웠다 ☐ 누군가에게 보여 줬다',
+ 'apA.l1':'예: https://oreum-side.vercel.app', 'apA.l2':'예: https://health-buddy.vercel.app', 'apA.l3':'예: https://local-hero.vercel.app',
+ 'apA.desc':'예: 오름 옆길 — 오름 + 주변을 잇는 2~3시간 코스 / AI 건강 비서 — 병원·처방 기록을 쉽게 적고 꺼내 보기 / 로컬 히어로 — 영업사원이 동네 사장님을 돕는 도구',
+ 'apB.text':'예:\n바이브코딩 : 말로 설명하면 AI가 코드를 써 주는 방식. 우리가 4주 동안 한 것.\nMD 파일 : AI에게 줄 설명서. 목표·사용자·기능을 글로 적은 문서.\n배포 : 내 컴퓨터에만 있던 걸 인터넷에 올려 남도 보게 하는 일.',
+ 'apC.text':'예: 문제 발견 — TOOL BOX 01 퍼실리테이션 (41p) → 정의 — TOOL BOX 02 MD 파일 (68p) → 제작 — 5분 교실 (84p) → 디버깅 — TOOL BOX 03 (98p) → 배포 — TOOL BOX 04 (118p)',
+ 'apD.text':'예:\n루키 : https://…\n파란 : https://…',
+ 'apE.url':'예: https://… (노션이나 구글 드라이브 폴더)', 'apE.list':'예: 설치 안내 최신판, MD 템플릿, 문제 정의 템플릿, 인터뷰 질문지, 발표 자료 템플릿',
+};
+/* 이름표에 따라 붙는 기본 예시 (위 표에 없는 칸) */
+function fallbackEx(f,item){const L=f.label||'';
+  if(item&&item.id==='toteam')return'예: 루키: 새벽에 같이 있어 줘서 고마웠어요 / 트니맘: 내가 딴지 걸 때마다 들어 줘서 고마워요';
+  if(/팀 소개/.test(L))return'예: 팀 소개 두세 문장 + 팀원 스탯 요약 (누가 무엇을 맡았나)';
+  if(/MBTI/.test(L))return'예: INFP (안 써도 됨)';
+  if(/진행 상태/.test(L))return'예: 9/20 요청 보냄 / 회신 대기 / 받음';
+  if(/넣을 자리/.test(L))return'예: WEEK 3 CH 9 뒤';
+  if(/QR|링크|주소|url/i.test(L))return'예: https://…';
+  if(/파일명|사진|캡처/.test(L))return'예: 0905_첫모임_03.jpg (여러 개면 쉼표로)';
+  if(/질문과 답/.test(L))return'예:\nQ. (질문)\n루키: (답)\n민아: (답)';
+  if(/개념/.test(L))return'예: 이 도구가 무엇인지, 왜 필요한지를 두세 문장으로. 제품 이름보다 역할로.';
+  if(/실제 장면/.test(L))return'예: 이 개념이 실제로 쓰인 날의 장면 한 토막. 누가, 언제, 무엇을 했더니 어떻게 됐나.';
+  if(/딴지/.test(L))return'예: "…" (누가, 어디서)';
+  if(/원고/.test(L))return'예: 장면으로 시작한다. 날짜·장소·누가 무슨 말을 했는지. 설명보다 대화와 순간을. 두세 문단이면 충분하고, 길면 나중에 자릅니다.';
+  if(/제목|한 문장/.test(L))return'예: 딴지를 거는 것도 능력이더라고요';
+  if(/누구|닉네임/.test(L))return'예: 루키';
+  if(/팀$/.test(L))return'예: 오름 옆길';
+  if(/에피소드|팁/.test(L))return'예: 운전하면서 음성으로 클로드한테 시켰어요. 신호 대기 때 확인하고. (있는 그대로, 정제하지 말고)';
+  if(f.type==='area')return'예: 생각나는 대로 적으세요. 정리는 나중에 합니다.';
+  return'';}
+
+/* ============ 렌더 ============ */
+function field(item,f,extraCls){
+  if(!f)return'';
+  const k=key(item,f), v=val(item,f);
+  const ph=f.ph||EX[k]||fallbackEx(f,item);
+  const inp=f.type==='area'
+    ?`<textarea id="f-${k}" data-k="${k}" placeholder="${esc(ph)}">${esc(v)}</textarea>`
+    :`<input type="text" id="f-${k}" data-k="${k}" value="${esc(v)}" placeholder="${esc(ph)}">`;
+  return `<div class="f${v.trim()?' filled':''}${extraCls?' '+extraCls:''}"><label for="f-${k}">${f.label}</label>${inp}</div>`;
+}
+function itemBlock(item, keys){
+  const fs = keys ? keys.map(k=>fld(item,k)).filter(Boolean) : item.fields;
+  const g3=fs.filter(f=>f.cls==='g3'), rest=fs.filter(f=>f.cls!=='g3');
+  const texts=rest.filter(f=>f.type==='text'), areas=rest.filter(f=>f.type==='area');
+  let h=`<div class="it" id="item-${item.id}${keys?'-'+keys[0]:''}" data-item="${item.id}"><h3>${item.title}<span class="cnt"></span></h3>`;
+  if(item.spec) h+=`<div class="spec">${item.spec}</div>`;
+  if(texts.length){h+=`<div class="g2">`;for(const f of texts)h+=field(item,f);h+=`</div>`}
+  if(g3.length){h+=`<div class="g3">`;for(const f of g3)h+=field(item,f);h+=`</div>`}
+  for(const f of areas)h+=field(item,f);
+  return h+`</div>`;
+}
+function pageHtml(side, ids, folio, cls){
+  let h=`<div class="pg ${side}${cls?' '+cls:''}">`;
+  for(const id of ids){const it=ITEMS[id]; if(it) h+=itemBlock(it)}
+  return h+`<div class="folio">${folio}</div></div>`;
+}
+function spread(leftHtml,rightHtml){return `<div class="spread">${leftHtml}${rightHtml}</div>`}
+
+function renderCover(){
+  const it=ITEMS['cover-front'];
+  const f=k=>fld(it,k);
+  const inp=(k,cls)=>{const ff=f(k);const kk=key(it,ff);return `<input type="text" class="${cls}" id="f-${kk}" data-k="${kk}" value="${esc(val(it,ff))}" placeholder="${esc(ff.ph||ff.label)}" title="${ff.label}">`};
+  const left=`<div class="pg left cover"><div class="band"></div><div class="hint">칸을 눌러 바로 고칠 수 있습니다</div>
+    <div class="in">${inp('small','small')}<div style="margin-top:14px">${inp('title','big')}</div>${inp('sub','sub')}</div>
+    <div class="art"><svg width="420" height="250" viewBox="0 0 560 330"><ellipse cx="280" cy="230" rx="200" ry="70" fill="#E7DCCB" stroke="#1F2A44" stroke-width="2"/>${Array.from({length:11},(_,i)=>`<circle cx="${(280+200*Math.cos(Math.PI*2*i/11-1.57)).toFixed(0)}" cy="${(230+92*Math.sin(Math.PI*2*i/11-1.57)).toFixed(0)}" r="17" fill="${['#D9673A','#5E9C8A','#1F2A44','#E9C46A'][i%4]}"/>`).join('')}<rect x="215" y="200" width="46" height="30" rx="3" fill="#fff" stroke="#1F2A44"/><rect x="300" y="205" width="34" height="24" rx="3" fill="#FFF6D6" stroke="#1F2A44"/><path d="M260 215 C 300 120, 360 140, 400 90" stroke="#D9673A" stroke-width="2" fill="none" stroke-dasharray="4 4"/><rect x="395" y="30" width="70" height="120" rx="10" fill="#1F2A44"/><rect x="402" y="42" width="56" height="96" rx="4" fill="#F3EDE3"/><rect x="408" y="50" width="44" height="8" rx="2" fill="#D9673A"/><rect x="408" y="64" width="30" height="6" rx="2" fill="#5E9C8A"/></svg>
+    <div class="spec" style="text-align:left;padding:0 36px">${it.spec}</div></div>
+    <div class="authorbox">${inp('author','author')}</div><div class="band2"></div></div>`;
+  let right=`<div class="pg right">`;
+  right+=`<div class="it"><h3>표지 그림 메모</h3>${field(it,f('art'))}</div>`;
+  for(const id of ['cover-back','cover-spine','cover-flap1','cover-flap2','cover-band','cover-lines']) right+=itemBlock(ITEMS[id]);
+  right+=`<div class="folio">표지 뒷면 · 날개 · 띠지</div></div>`;
+  return spread(left,right);
+}
+function hexagon(vals,size=210){
+  const cx=size/2,cy=size/2,r=size/2-26,L=STATS;
+  const pt=(k,i)=>[cx+r*k*Math.cos(Math.PI/180*(-90+60*i)),cy+r*k*Math.sin(Math.PI/180*(-90+60*i))];
+  let s=`<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">`;
+  for(const k of [.2,.4,.6,.8,1]) s+=`<polygon points="${[0,1,2,3,4,5].map(i=>pt(k,i).map(n=>n.toFixed(1)).join(',')).join(' ')}" fill="none" stroke="#D9CFBD" stroke-width="${k===1?1.4:.7}"/>`;
+  for(let i=0;i<6;i++){const [x,y]=pt(1,i);s+=`<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#D9CFBD" stroke-width=".7"/>`}
+  const d=vals.map((v,i)=>pt(Math.max(0,Math.min(5,v))/5,i));
+  s+=`<polygon points="${d.map(p=>p.map(n=>n.toFixed(1)).join(',')).join(' ')}" fill="rgba(217,103,58,.35)" stroke="#D9673A" stroke-width="2"/>`;
+  d.forEach(p=>s+=`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3.5" fill="#D9673A"/>`);
+  for(let i=0;i<6;i++){const [x,y]=pt(1.24,i);s+=`<text x="${x.toFixed(1)}" y="${(y+4).toFixed(1)}" font-size="10.5" text-anchor="middle" fill="#1F2A44" font-weight="700">${L[i]} <tspan fill="#D9673A">${vals[i]||'-'}</tspan></text>`}
+  return s+'</svg>';
+}
+function renderPlayer(it, n){
+  const f=k=>fld(it,k); const F=k=>field(it,f(k));
+  const stats=[0,1,2,3,4,5].map(i=>parseInt(val(it,f('stat'+i)),10)||0);
+  const left=`<div class="pg left sand"><div class="kicker">PART 0 · 실험실의 사람들</div><div class="pnum"><b>${n}</b><span>PLAYER</span></div>
+    <div class="spec">${it.spec}</div>
+    <div style="display:flex;gap:14px;align-items:flex-start;margin-top:6px"><div class="circle" style="width:110px;height:110px;flex:none;border:3px solid #fff">캐릭터<br>이미지</div><div style="flex:1">${F('nick')}<div class="g2">${F('real')}${F('team')}</div></div></div>
+    <div class="g2">${F('age')}${F('home')}${F('job')}${F('interest')}${F('mbti')}${F('img')}</div>
+    <div class="card">${F('start')}</div><div class="card">${F('why')}</div><div class="card">${F('worry')}</div>
+    <div class="folio">실험실의 사람들 · PLAYER ${n}</div></div>`;
+  const right=`<div class="pg right sand"><div class="kicker">STATS</div>
+    <div class="hexwrap" id="hex-${it.id}">${hexagon(stats)}</div>
+    <div class="g3">${[0,1,2,3,4,5].map(i=>field(it,f('stat'+i))).join('')}</div>
+    ${F('skill')}
+    <div class="card navy"><div class="kicker" style="color:var(--gold)">이 사람의 한마디, 뒤에서 만납니다</div>${F('tease')}</div>
+    <div class="g2">${F('qr')}${F('agree')}</div>
+    <div class="folio">실험실의 사람들 · STATS</div></div>`;
+  return spread(left,right);
+}
+/* 장별 추가 항목·의견 모으기 */
+function customItems(sid){const m={};for(const k in DATA){const mm=k.match(/^(x-([a-z0-9]+)-[a-z0-9]+)\.(title|text)$/);if(mm&&mm[2]===sid)(m[mm[1]]=m[mm[1]]||{id:mm[1]})[mm[3]]=DATA[k]}return Object.values(m).sort((a,b)=>a.id<b.id?-1:1)}
+function comments(sid){const m={};for(const k in DATA){const mm=k.match(/^(c-([a-z0-9]+)-[a-z0-9]+)\.(who|text|time|ref)$/);if(mm&&mm[2]===sid)(m[mm[1]]=m[mm[1]]||{id:mm[1]})[mm[3]]=DATA[k]}return Object.values(m).sort((a,b)=>a.id<b.id?-1:1)}
+function customItemDef(id){return {id,fields:[T('title','항목 이름',{ph:'예: 첫날 단체 사진 뒷이야기'}),A('text','내용')]}}
+function renderExtras(s){
+  const cs=customItems(s.id), cm=comments(s.id);
+  let x=`<div class="pg xtra"><div class="kicker">추가한 항목 · ${s.title.replace(/ · .*$/,'')}</div><div class="spec">뼈대에 없는 자리가 필요하면 여기에 더합니다. 책에 넣을 내용이면 md에도 같이 나옵니다.</div>`;
+  for(const c of cs){const it=customItemDef(c.id);x+=`<div class="it" data-item="${c.id}"><h3>추가 항목<span class="cnt"></span><button type="button" class="xdel" data-del="${c.id}">삭제</button></h3>${field(it,it.fields[0])}${field(it,it.fields[1])}</div>`}
+  if(!cs.length)x+=`<div class="empty">아직 추가한 항목이 없습니다.</div>`;
+  x+=`<button type="button" class="addbtn" data-add="${s.id}">+ 항목 추가</button></div>`;
+  const refs=activeItemIds(s).map(id=>ITEMS[id]).filter(Boolean).map(it=>`<option value="${esc(strip(it.title))}">${esc(strip(it.title))}</option>`).join('');
+  let c=`<div class="cbox"><div class="kicker">의견 · ${cm.length}개</div><div class="spec">이 장에 대해 하고 싶은 말을 남깁니다. 이름을 적으면 누가 쓴 의견인지 남습니다.</div>`;
+  for(const o of cm){c+=`<div class="cm"><button type="button" class="cdel" data-cdel="${o.id}">삭제</button><span class="who">${esc(o.who||'이름 없음')}</span><span class="when">${esc(o.time||'')}</span>${o.ref?`<span class="ref">${esc(o.ref)}</span>`:''}<p>${esc(o.text||'')}</p></div>`}
+  if(!cm.length)c+=`<div class="empty">아직 의견이 없습니다.</div>`;
+  c+=`<form class="cform" data-cform="${s.id}"><div class="row"><input type="text" name="who" placeholder="이름 (닉네임)" value="${esc(load('me')||'')}"><select name="ref"><option value="">장 전체에 대한 의견</option>${refs}</select></div><textarea name="text" placeholder="의견을 적고 [의견 남기기]를 누르세요"></textarea><button type="submit">의견 남기기</button></form></div>`;
+  return `<div class="extras">${x}${c}</div>`;
+}
+function renderSlide(s, idx){
+  let body='';
+  if(s.custom==='cover') body=renderCover();
+  else if(s.tabs){
+    const tabs=tabsOf(s);let cur=load('tab.'+s.id);if(!tabs.some(t=>t.id===cur))cur=tabs[0].id;
+    body+=`<div class="tabs" data-slide="${s.id}">${tabs.map(t=>`<button data-tab="${t.id}" class="${t.id===cur?'on':''}">${t.label}</button>`).join('')}</div>`;
+    for(const t of tabs){
+      const it=ITEMS[t.id]; let sp='';
+      if(s.custom==='player') sp=renderPlayer(it, t.id.slice(-2));
+      else { const L=`<div class="pg left">${itemBlock(it,s.split.left)}<div class="folio">${esc(t.label)}</div></div>`;
+             const R=`<div class="pg right">${itemBlock(it,s.split.right)}<div class="folio">${esc(t.label)} · 계속</div></div>`; sp=spread(L,R); }
+      body+=`<div class="panel${t.id===cur?' on':''}" data-panel="${t.id}">${sp}</div>`;
+    }
+  } else {
+    const rightCls = s.right.some(id=>TOOLBOX.has(id)) ? '' : '';
+    body=spread(pageHtml('left',s.left,s.title,''), pageHtml('right',s.right,s.title+' · 장치',rightCls));
+  }
+  return `<section class="slide" id="${s.id}" data-title="${esc(s.title)}"><div class="slide-h"><b>${idx+1}. ${s.title}</b><span class="cnt" data-scnt="${s.id}"></span></div>${body}${renderExtras(s)}</section>`;
+}
+function render(){
+  document.getElementById('app').innerHTML=ACTIVE.map(renderSlide).join('');
+  document.getElementById('quick').innerHTML=ACTIVE.map(s=>`<a href="#${s.id}" title="${esc(s.title)}">${SLIDES.indexOf(s)+1}. ${SHORT[s.id]||s.title}<span class="n" data-qcnt="${s.id}"></span></a>`).join('');
+  const sb=document.getElementById('scopebar');
+  if(SCOPE.length){sb.innerHTML=`<b>부분 작업 파일</b> 담긴 것: ${esc(scopeLabel())} &nbsp;·&nbsp; 채운 뒤 <b>파일로 저장</b>해서 취합 담당에게 보내면, 전체 파일에서 <b>부분 파일 합치기</b>로 모읍니다.`;sb.classList.add('show')}
+  document.querySelectorAll('textarea').forEach(autoGrow);
+  refresh();
+}
+function autoGrow(t){const empty=!t.value;if(empty)t.value=t.placeholder||'';t.style.height='auto';let h=t.scrollHeight+4;if(empty){h=Math.min(h,200);t.value=''}t.style.height=h+'px'}
+
+/* ============ 진행 상황 ============ */
+function refresh(){
+  let total=0,done=0;
+  document.querySelectorAll('.it').forEach(it=>{let t=0,d=0;it.querySelectorAll('[data-k]').forEach(el=>{t++;const ok=el.value.trim()!=='';el.closest('.f').classList.toggle('filled',ok);if(ok)d++});const c=it.querySelector('h3 .cnt');if(c)c.textContent=d+'/'+t});
+  document.querySelectorAll('.slide').forEach(sl=>{let t=0,d=0;sl.querySelectorAll('[data-k]').forEach(el=>{t++;if(el.value.trim())d++});total+=t;done+=d;
+    const c=sl.querySelector('[data-scnt]');if(c)c.textContent=`채움 ${d}/${t}`;const q=document.querySelector(`[data-qcnt="${sl.id}"]`);if(q)q.textContent=`${d}/${t}`});
+  document.querySelectorAll('.tabs button').forEach(b=>{const p=document.querySelector(`[data-panel="${b.dataset.tab}"]`);if(!p)return;let t=0,d=0;p.querySelectorAll('[data-k]').forEach(el=>{t++;if(el.value.trim())d++});b.classList.toggle('done',t>0&&d===t)});
+  document.getElementById('progress').textContent=`채움 ${done} / ${total}`;
+}
+function setStatus(t,c){const s=document.getElementById('status');s.textContent=t;s.className=c||''}
+
+/* ============ 입력 처리 ============ */
+document.addEventListener('input',e=>{const el=e.target;if(!el.dataset||!el.dataset.k)return;
+  DATA[el.dataset.k]=el.value;dirty=true;setStatus('저장 안 됨','dirty');
+  if(el.tagName==='TEXTAREA')autoGrow(el);
+  const f=el.closest('.f');if(f)f.classList.toggle('filled',el.value.trim()!=='');
+  const m=el.dataset.k.match(/^(player\d\d)\.stat(\d)$/);
+  if(m){const it=ITEMS[m[1]];const hx=document.getElementById('hex-'+m[1]);if(hx)hx.innerHTML=hexagon([0,1,2,3,4,5].map(i=>parseInt(val(it,fld(it,'stat'+i)),10)||0))}
+  scheduleLocal();
+});
+document.addEventListener('change',e=>{if(e.target.dataset&&e.target.dataset.k)refresh()});
+let lsTimer=null;
+function scheduleLocal(){clearTimeout(lsTimer);lsTimer=setTimeout(()=>save('data',JSON.stringify({t:Date.now(),d:DATA})),500)}
+
+/* 추가 항목 · 의견 */
+function rerenderSlide(sid){const s=SLIDES.find(x=>x.id===sid);const old=document.getElementById(sid);if(!s||!old)return;const idx=ACTIVE.indexOf(s);const tmp=document.createElement('div');tmp.innerHTML=renderSlide(s,idx);const nu=tmp.firstElementChild;nu.classList.toggle('on',old.classList.contains('on'));old.replaceWith(nu);nu.querySelectorAll('textarea').forEach(autoGrow);refresh()}
+function touch(){dirty=true;setStatus('저장 안 됨','dirty');scheduleLocal()}
+document.addEventListener('click',e=>{
+  const add=e.target.closest('[data-add]');if(add){const id='x-'+add.dataset.add+'-'+uid();DATA[id+'.title']='';DATA[id+'.text']='';touch();rerenderSlide(add.dataset.add);const el=document.getElementById('f-'+id+'.title');if(el){el.scrollIntoView({block:'center'});el.focus()}return}
+  const del=e.target.closest('[data-del]');if(del){const id=del.dataset.del;const t=(DATA[id+'.title']||'').trim();if(!confirm(`추가 항목${t?' "'+t+'"':''}을 지울까요?`))return;delete DATA[id+'.title'];delete DATA[id+'.text'];touch();rerenderSlide(slideOf(id));return}
+  const cd=e.target.closest('[data-cdel]');if(cd){const id=cd.dataset.cdel;if(!confirm('이 의견을 지울까요?'))return;for(const k of ['who','text','time','ref'])delete DATA[id+'.'+k];touch();rerenderSlide(slideOf(id));return}
+});
+document.addEventListener('submit',e=>{const f=e.target.closest('form[data-cform]');if(!f)return;e.preventDefault();
+  const who=f.who.value.trim(),text=f.text.value.trim(),ref=f.ref.value;if(!text){f.text.focus();return}
+  const id='c-'+f.dataset.cform+'-'+uid();DATA[id+'.who']=who;DATA[id+'.text']=text;DATA[id+'.ref']=ref;DATA[id+'.time']=new Date().toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  if(who)save('me',who);touch();rerenderSlide(f.dataset.cform)});
+document.addEventListener('input',e=>{const el=e.target;if(el.name==='who'&&el.closest('form[data-cform]'))save('me',el.value)});
+
+/* 탭 */
+document.addEventListener('click',e=>{const b=e.target.closest('.tabs button');if(!b)return;const tabs=b.parentElement;const sid=tabs.dataset.slide;
+  tabs.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));
+  const sl=document.getElementById(sid);sl.querySelectorAll('.panel').forEach(p=>p.classList.toggle('on',p.dataset.panel===b.dataset.tab));
+  save('tab.'+sid,b.dataset.tab);sl.querySelectorAll('.panel.on textarea').forEach(autoGrow)});
+
+/* ============ 페이지 넘기기 (회의록 대시보드 방식) ============ */
+const $=id=>document.getElementById(id);
+const pages=()=>[...document.querySelectorAll('.slide')];
+let cur=0;
+function show(i,scroll){
+  const ps=pages(); i=Math.max(0,Math.min(ps.length-1,i));cur=i;
+  ps.forEach((p,k)=>p.classList.toggle('on',k===i));
+  $('pgn').textContent=(i+1)+' / '+ps.length; $('pgt').textContent=ps[i].dataset.title||'';
+  $('prev').disabled=i===0;$('next').disabled=i===ps.length-1;
+  document.querySelectorAll('.quick a').forEach(a=>a.classList.toggle('cur',a.getAttribute('href')==='#'+ps[i].id));
+  save('page',String(i));try{history.replaceState(null,'','#'+ps[i].id)}catch(e){}
+  ps[i].querySelectorAll('textarea').forEach(autoGrow);
+  if(scroll!==false)window.scrollTo({top:0});
+}
+function goTo(id){const el=document.getElementById(id);if(!el)return false;if(document.body.classList.contains('all'))return false;const p=el.closest('.slide');const i=pages().indexOf(p);if(i<0)return false;show(i);if(el!==p)setTimeout(()=>el.scrollIntoView({block:'start'}),0);return true}
+document.addEventListener('click',e=>{const a=e.target.closest('a[href^="#"]');if(!a)return;if(goTo(a.getAttribute('href').slice(1)))e.preventDefault()});
+document.querySelector('.pgmid').style.cursor='pointer';document.querySelector('.pgmid').title='누르면 맨 위 바로가기 줄로 올라갑니다';document.querySelector('.pgmid').addEventListener('click',()=>window.scrollTo({top:0}));
+$('prev').addEventListener('click',()=>show(cur-1));$('next').addEventListener('click',()=>show(cur+1));
+document.addEventListener('keydown',e=>{if(e.target.matches('input,textarea,select,button')||e.altKey||e.ctrlKey||e.metaKey)return;if(e.key==='ArrowRight'||e.key==='PageDown'){show(cur+1);e.preventDefault()}if(e.key==='ArrowLeft'||e.key==='PageUp'){show(cur-1);e.preventDefault()}});
+const allT=$('allToggle');
+allT.addEventListener('change',()=>{document.body.classList.toggle('all',allT.checked);save('all',allT.checked?'1':'0');if(allT.checked)document.querySelectorAll('textarea').forEach(autoGrow);else show(cur)});
+const specT=$('specToggle');
+specT.addEventListener('change',()=>{document.body.classList.toggle('show-spec',specT.checked);save('spec',specT.checked?'1':'0')});
+window.addEventListener('hashchange',()=>goTo(location.hash.slice(1)));
+
+/* ============ 저장 · 내보내기 · 불러오기 ============ */
+function buildHtml(data,scope){const c=document.documentElement.cloneNode(true);c.querySelector('#data').textContent=JSON.stringify(data||DATA);c.querySelector('#scope').textContent=JSON.stringify(scope||SCOPE);c.querySelector('#app').innerHTML='';c.querySelector('#quick').innerHTML='';const n=c.querySelector('#notice');n.className='notice';n.innerHTML='';const sb=c.querySelector('#scopebar');sb.className='scopebar';sb.innerHTML='';c.querySelector('#dlg').setAttribute('hidden','');c.querySelector('body').className='show-spec';return '<!DOCTYPE html>\n'+c.outerHTML}
+/* 부분 파일: 고른 장에 속한 칸만 담아 내려받기 */
+function subsetData(list){const out={};for(const k in DATA){const it=k.split('.')[0];if(slideOf(it)&&itemInScope(it,list))out[k]=DATA[k]}return out}
+let dlgMode='person';
+function cntOf(ids){let tt=0,d=0;for(const id of ids){const it=ITEMS[id];if(!it)continue;for(const f of it.fields){tt++;if(((DATA[key(it,f)]!==undefined?DATA[key(it,f)]:(f.def||''))+'').trim())d++}}return d+'/'+tt}
+function setMode(m){dlgMode=m;document.querySelectorAll('.dlgmodes button').forEach(b=>b.classList.toggle('on',b.dataset.mode===m));document.querySelectorAll('.dlgpane').forEach(p=>p.classList.toggle('on',p.dataset.pane===m))}
+function openDlg(){const ps=pages();const cp=ps[Math.max(0,Math.min(ps.length-1,cur))];const curId=cp?cp.id:ACTIVE[0].id;
+  const pl=ACTIVE.find(s=>s.id==='players'), iv=ACTIVE.find(s=>s.id==='interviews'), tm=ACTIVE.find(s=>s.id==='teams');
+  const nums=[...new Set([...(pl?tabsOf(pl).map(x=>x.id.slice(-2)):[]),...(iv?tabsOf(iv).map(x=>x.id.slice(-2)):[])])].sort();
+  document.getElementById('dlgPersons').innerHTML=nums.map(n=>{const nick=((DATA['player'+n+'.nick']||DATA['iv'+n+'.who']||'')+'').trim();return `<label><input type="checkbox" value="${n}"> P${n}${nick?' · '+esc(nick):''}<small>${cntOf(['player'+n,'iv'+n])}</small></label>`}).join('')||'<div class="empty">이 파일에는 플레이어 카드·인터뷰 장이 없습니다.</div>';
+  document.getElementById('dlgTeams').innerHTML=tm?tabsOf(tm).map(x=>`<label><input type="checkbox" value="${x.id}"> ${esc(x.label)}<small>${cntOf([x.id])}</small></label>`).join(''):'<div class="empty">이 파일에는 팀 결과물 장이 없습니다.</div>';
+  document.getElementById('dlglist').innerHTML=ACTIVE.map(s=>`<label><input type="checkbox" value="${s.id}"${s.id===curId?' checked':''}> ${SLIDES.indexOf(s)+1}. ${SHORT[s.id]||s.title}<small>${cntOf(activeItemIds(s))}</small></label>`).join('');
+  setMode(curId==='teams'?'team':((curId==='players'||curId==='interviews')?'person':'slide'));
+  document.getElementById('dlg').hidden=false}
+document.querySelectorAll('.dlgmodes button').forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
+document.getElementById('btnPart').onclick=openDlg;
+document.getElementById('dlgCancel').onclick=()=>{document.getElementById('dlg').hidden=true};
+const paneInputs=()=>document.querySelectorAll(`.dlgpane[data-pane="${dlgMode}"] .dlglist input`);
+document.getElementById('dlgAll').onclick=()=>paneInputs().forEach(i=>i.checked=true);
+document.getElementById('dlgNone').onclick=()=>paneInputs().forEach(i=>i.checked=false);
+const safeName=s=>String(s).replace(/[\\/:*?"<>|]/g,'').trim();
+function splitFiles(mode,picked,opt){const day=new Date().toISOString().slice(0,10);const files=[];
+  if(mode==='person'){for(const n of picked){const sc=[];if(opt.card&&ITEMS['player'+n])sc.push('players:player'+n);if(opt.iv&&ITEMS['iv'+n])sc.push('interviews:iv'+n);if(!sc.length)continue;
+      const nick=safeName(DATA['player'+n+'.nick']||DATA['iv'+n+'.who']||'');files.push({name:`책뼈대_개인_P${n}${nick?'_'+nick:''}_${day}.html`,scope:sc,html:buildHtml(subsetData(sc),sc)})}}
+  else if(mode==='team'){for(const id of picked){const sc=['teams:'+id];const lab=safeName((SLIDES.find(s=>s.id==='teams').tabs.find(x=>x.id===id)||{}).label||id);files.push({name:`책뼈대_팀_${lab}_${day}.html`,scope:sc,html:buildHtml(subsetData(sc),sc)})}}
+  else{const sc=picked.map(id=>TABF[id]?[...TABF[id]].map(tb=>id+':'+tb):[id]).flat();const titles=picked.map(id=>safeName(SHORT[id]||id)).join('+');files.push({name:`책뼈대_부분_${titles}_${day}.html`,scope:sc,html:buildHtml(subsetData(sc),sc)})}
+  return files}
+async function saveMany(files){
+  if(files.length>1&&window.showDirectoryPicker){try{const dir=await showDirectoryPicker({mode:'readwrite'});for(const f of files){const fh=await dir.getFileHandle(f.name,{create:true});const w=await fh.createWritable();await w.write(f.html);await w.close()}setStatus(`폴더에 ${files.length}개 저장함`);return true}catch(e){if(e.name==='AbortError')return false}}
+  for(let i=0;i<files.length;i++){download(files[i].html,files[i].name,'text/html');if(i<files.length-1)await new Promise(r=>setTimeout(r,500))}
+  setStatus(`${files.length}개 내려받음`);return true}
+document.getElementById('dlgGo').onclick=async()=>{const picked=[...paneInputs()].filter(i=>i.checked).map(i=>i.value);
+  if(!picked.length){alert('하나 이상 고르세요.');return}
+  const opt={card:document.getElementById('incCard').checked,iv:document.getElementById('incIv').checked};
+  if(dlgMode==='person'&&!opt.card&&!opt.iv){alert('플레이어 카드와 인터뷰 중 하나는 담아야 합니다.');return}
+  const files=splitFiles(dlgMode,picked,opt);if(!files.length)return;
+  if(await saveMany(files))document.getElementById('dlg').hidden=true};
+document.getElementById('dlg').addEventListener('click',e=>{if(e.target.id==='dlg')e.target.hidden=true});
+/* 부분 파일 합치기: 들어온 파일의 "채워진" 칸만 이 파일에 반영. 빈 칸은 건드리지 않는다 */
+document.getElementById('mergeIn').addEventListener('change',async e=>{const files=[...e.target.files];if(!files.length)return;
+  let added=0,over=0,skipped=0,names=[];
+  for(const f of files){const txt=await f.text();let d=null,sc=[];
+    try{if(f.name.endsWith('.json'))d=JSON.parse(txt);else{const m=txt.match(/<script type="application\/json" id="data">([\s\S]*?)<\/script>/);if(m)d=JSON.parse(m[1]);const m2=txt.match(/<script type="application\/json" id="scope">([\s\S]*?)<\/script>/);if(m2)sc=JSON.parse(m2[1])||[]}}catch(err){}
+    if(!d){alert(f.name+' : 입력 내용을 찾지 못했습니다.');continue}
+    const plan=[];
+    for(const k in d){const v=(d[k]||'').trim();if(!v){skipped++;continue}const it=k.split('.')[0];if(!knownItem(it))continue;if(sc.length&&!itemInScope(it,sc))continue;
+      const mine=(DATA[k]||'').trim();if(mine===v)continue;plan.push([k,d[k],!!mine])}
+    if(!plan.length){names.push(f.name+' (바뀐 칸 없음)');continue}
+    const o=plan.filter(p=>p[2]).length;
+    if(!confirm(`${f.name}\n\n채워진 칸 ${plan.length}개를 반영합니다.\n그중 ${o}개는 이 파일에 이미 다른 내용이 있어 덮어씁니다.\n\n계속할까요?`)){names.push(f.name+' (건너뜀)');continue}
+    for(const [k,v,had] of plan){DATA[k]=v;if(had)over++;else added++}names.push(f.name)}
+  if(added||over){render();show(cur,false);dirty=true;setStatus(`합침: 새로 ${added} · 덮어씀 ${over} (저장 안 됨)`,'dirty');scheduleLocal()}
+  else setStatus('합칠 내용이 없었습니다');
+  e.target.value=''});
+let fileHandle=null;
+async function saveFile(){const html=buildHtml();const name=(location.pathname.split('/').pop()?decodeURIComponent(location.pathname.split('/').pop()):'책뼈대_펼침면입력.html');
+  if(window.showSaveFilePicker){try{if(!fileHandle)fileHandle=await showSaveFilePicker({suggestedName:name,types:[{description:'HTML',accept:{'text/html':['.html']}}]});const w=await fileHandle.createWritable();await w.write(html);await w.close();dirty=false;setStatus('저장됨 '+new Date().toLocaleTimeString());try{localStorage.removeItem(LS+'data')}catch(e){}return}catch(e){if(e.name==='AbortError')return;fileHandle=null}}
+  download(html,name,'text/html');dirty=false;setStatus('다운로드됨')}
+function download(content,name,type){const b=new Blob([content],{type:type+';charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+function strip(s){return String(s).replace(/<[^>]+>/g,'').replace(/\s+/g,' ').trim()}
+function buildMd(){const ds=new Date().toISOString().slice(0,10);const inScope=id=>itemInScope(id,SCOPE);
+  let md=`# 책 뼈대 — 입력 내용 (${ds})${SCOPE.length?' · 부분: '+scopeLabel():''}\n\n`;
+  for(const part of BOOK){const items=part.items.filter(it=>inScope(it.id));if(!items.length)continue;md+=`## ${strip(part.title)}${part.pages?' ('+part.pages+')':''}\n\n`;if(part.intro)md+=`> ${strip(part.intro)}\n\n`;
+    for(const item of items){md+=`### ${strip(item.title)}\n\n`;if(item.spec)md+=`_${strip(item.spec)}_\n\n`;
+      for(const f of item.fields){const v=(DATA[key(item,f)]!==undefined?DATA[key(item,f)]:(f.def||'')).trim();
+        if(!v){md+=`- **${strip(f.label)}**: (비어 있음)\n`;continue}
+        if(v.includes('\n'))md+=`- **${strip(f.label)}**:\n\n${v.split('\n').map(l=>'  '+l).join('\n')}\n\n`;else md+=`- **${strip(f.label)}**: ${v}\n`}
+      md+='\n'}}
+  /* 장별 추가 항목과 의견 */
+  let xs='',cs='';
+  for(const s of ACTIVE){const ci=customItems(s.id);if(ci.length){xs+=`### ${strip(s.title)}\n\n`;for(const c of ci){xs+=`#### ${(c.title||'').trim()||'(이름 없는 항목)'}\n\n${(c.text||'').trim()||'(비어 있음)'}\n\n`}}
+    const cm=comments(s.id);if(cm.length){cs+=`### ${strip(s.title)}\n\n`;for(const o of cm){cs+=`- **${(o.who||'이름 없음').trim()}** (${o.time||''})${o.ref?' · '+o.ref:''}: ${(o.text||'').trim().replace(/\n/g,' / ')}\n`}cs+='\n'}}
+  if(xs)md+=`## 추가한 항목 (장별)\n\n${xs}`;
+  if(cs)md+=`## 의견 (장별)\n\n${cs}`;
+  return md}
+$('fileIn').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;const txt=await f.text();let d=null;
+  try{if(f.name.endsWith('.json'))d=JSON.parse(txt);else{const m=txt.match(/<script type="application\/json" id="data">([\s\S]*?)<\/script>/);if(m)d=JSON.parse(m[1])}}catch(err){}
+  if(!d){alert('이 파일에서 입력 내용을 찾지 못했습니다.');return}
+  if(!confirm('현재 내용을 불러온 파일의 내용으로 바꿀까요? (지금 화면의 내용은 사라집니다)'))return;
+  DATA=d;render();show(cur,false);dirty=true;setStatus('불러옴 (저장 안 됨)','dirty');scheduleLocal();e.target.value=''});
+$('btnSave').onclick=saveFile;
+$('btnMd').onclick=()=>download(buildMd(),'책뼈대_입력_'+new Date().toISOString().slice(0,10)+'.md','text/markdown');
+$('btnPrint').onclick=()=>{const was=document.body.classList.contains('all');document.body.classList.add('all');document.querySelectorAll('textarea').forEach(autoGrow);setTimeout(()=>{window.print();if(!was){document.body.classList.remove('all');show(cur,false)}},50)};
+$('btnEmpty').onclick=function(){document.body.classList.toggle('onlyempty');this.textContent=document.body.classList.contains('onlyempty')?'전체 칸 보기':'빈 칸만 보기'};
+document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();saveFile()}});
+window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue=''}});
+
+/* ============ Firebase 실시간 저장 (Vercel 배포용) ============ */
+const FIREBASE_CONFIG = {
+  apiKey: "PUT_YOUR_API_KEY_HERE",
+  authDomain: "PUT_YOUR_PROJECT.firebaseapp.com",
+  projectId: "PUT_YOUR_PROJECT_ID"
+};
+const CLOUD_DOC_PATH = "bookData/main";
+let cloudDb = null, cloudRef = null, cloudUser = null, cloudReady = false;
+let applyingRemote = false, cloudTimer = null, firstSnapshot = true;
+function cloudConfigured(){ return FIREBASE_CONFIG.apiKey && !String(FIREBASE_CONFIG.apiKey).includes("PUT_YOUR"); }
+function scheduleCloud(){
+  if (applyingRemote || !cloudReady || !cloudUser || SCOPE.length) return;
+  clearTimeout(cloudTimer);
+  cloudTimer = setTimeout(cloudPush, 800);
+}
+async function cloudPush(){
+  if (!cloudReady || !cloudUser || !cloudRef) return;
+  setStatus('클라우드 저장 중...');
+  try {
+    await cloudRef.set({ d: DATA, updatedAt: firebase.firestore.FieldValue.serverTimestamp(), updatedBy: cloudUser.uid }, { merge: true });
+    dirty = false;
+    setStatus('저장됨 ' + new Date().toLocaleTimeString());
+  } catch (err) { console.error(err); setStatus('클라우드 저장 실패', 'dirty'); }
+}
+function applyRemoteData(remote){
+  applyingRemote = true;
+  try {
+    const activeK = (document.activeElement && document.activeElement.dataset && document.activeElement.dataset.k) || null;
+    for (const k in remote) {
+      const rv = remote[k] == null ? '' : String(remote[k]);
+      const lv = DATA[k] == null ? '' : String(DATA[k]);
+      if (lv === rv) continue;
+      if (k === activeK) { DATA[k] = rv; continue; }
+      DATA[k] = rv;
+      const el = document.querySelector(`[data-k="${CSS.escape(k)}"]`);
+      if (el && 'value' in el && el.value !== rv) {
+        el.value = rv;
+        if (el.tagName === 'TEXTAREA') autoGrow(el);
+        const f = el.closest('.f'); if (f) f.classList.toggle('filled', rv.trim() !== '');
+      }
+    }
+    refresh();
+  } finally { applyingRemote = false; }
+}
+function subscribeCloud(){
+  if (!cloudDb || !cloudUser) return;
+  cloudRef = cloudDb.doc(CLOUD_DOC_PATH);
+  firstSnapshot = true;
+  cloudRef.onSnapshot((snap) => {
+    if (!snap.exists) { scheduleCloud(); firstSnapshot = false; return; }
+    const remote = (snap.data() && snap.data().d) || {};
+    if (firstSnapshot) {
+      firstSnapshot = false;
+      const localCount = Object.keys(DATA).filter(k => String(DATA[k] || '').trim() !== '').length;
+      if (localCount === 0 && Object.keys(remote).length > 0) {
+        DATA = Object.assign({}, remote);
+        render(); show(cur, false);
+        setStatus('클라우드에서 불러옴');
+      } else {
+        let merged = 0;
+        for (const k in remote) { if (String(DATA[k] || '').trim() === '' && String(remote[k] || '').trim() !== '') { DATA[k] = remote[k]; merged++; } }
+        if (merged > 0) { render(); show(cur, false); }
+        if (dirty || localCount > 0) scheduleCloud();
+      }
+      return;
+    }
+    applyRemoteData(remote);
+  }, (err) => { console.error(err); setStatus('실시간 연결 실패', 'dirty'); });
+}
+function initCloud(){
+  const btn = document.getElementById('btnLogin'), who = document.getElementById('cloudUser');
+  if (!cloudConfigured()) {
+    if (who) who.textContent = '로컬 모드';
+    const n = document.getElementById('notice');
+    if (n && !SCOPE.length && !n.classList.contains('show')) {
+      n.innerHTML = '클라우드 미설정: 지금은 파일 저장 모드입니다. Firebase 웹앱 설정의 apiKey/authDomain/projectId 3개를 index.html 상단 FIREBASE_CONFIG에 넣고 Vercel에 재배포하면 실시간 저장이 켜집니다.';
+      n.classList.add('show');
+    }
+    if (btn) btn.style.display = 'none';
+    return;
+  }
+  try {
+    firebase.initializeApp(FIREBASE_CONFIG);
+    cloudDb = firebase.firestore();
+    cloudReady = true;
+  } catch (err) { console.error(err); setStatus('Firebase 초기화 실패', 'dirty'); return; }
+  const auth = firebase.auth();
+  const provider = new firebase.auth.GoogleAuthProvider();
+  if (btn) btn.onclick = () => { if (cloudUser) auth.signOut(); else auth.signInWithPopup(provider).catch(e => alert('로그인 실패: ' + e.message)); };
+  auth.onAuthStateChanged((u) => {
+    cloudUser = u;
+    if (who) who.textContent = u ? ('● ' + (u.displayName || u.email)) : '';
+    if (btn) btn.textContent = u ? '로그아웃' : '로그인';
+    if (u && !SCOPE.length) subscribeCloud();
+  });
+  try {
+    const _orig = scheduleLocal;
+    scheduleLocal = function(){ _orig(); scheduleCloud(); };
+  } catch (e) { console.error(e); }
+}
+
+/* ============ 시작 ============ */
+render();
+initCloud();
+if(load('spec')==='0'){specT.checked=false;document.body.classList.remove('show-spec')}
+if(load('all')==='1'){allT.checked=true;document.body.classList.add('all')}
+(function(){const h=location.hash.slice(1);if(h&&goTo(h))return;const s=parseInt(load('page'),10);show(isNaN(s)?0:s,false)})();
+(function(){let local=null;try{local=JSON.parse(load('data')||'null')}catch(e){}
+  if(local&&local.d&&JSON.stringify(local.d)!==JSON.stringify(DATA)){const n=$('notice');
+    n.innerHTML=`브라우저에 저장 안 된 임시 내용이 있습니다 (${new Date(local.t).toLocaleString()}). <button id="nLoad">불러오기</button> <button id="nDrop">버리기</button>`;n.classList.add('show');
+    $('nLoad').onclick=()=>{DATA=local.d;render();show(cur,false);dirty=true;setStatus('임시본 불러옴 (저장 안 됨)','dirty');n.classList.remove('show')};
+    $('nDrop').onclick=()=>{try{localStorage.removeItem(LS+'data')}catch(e){}n.classList.remove('show')}}})();
+</script>
+</body>
+</html>
