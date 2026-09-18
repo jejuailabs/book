@@ -901,9 +901,12 @@ window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.return
 
 /* ============ Firebase 실시간 저장 (Vercel 배포용) ============ */
 const FIREBASE_CONFIG = {
-  apiKey: "PUT_YOUR_API_KEY_HERE",
-  authDomain: "PUT_YOUR_PROJECT.firebaseapp.com",
-  projectId: "PUT_YOUR_PROJECT_ID"
+  apiKey: "AIzaSyBJX8AeqERuFgnvgbpcwjBMgIxW4NEHiUI",
+  authDomain: "book-9b8ce.firebaseapp.com",
+  projectId: "book-9b8ce",
+  storageBucket: "book-9b8ce.firebasestorage.app",
+  messagingSenderId: "993357788148",
+  appId: "1:993357788148:web:9b5ac8ea4072dc75e53fa1"
 };
 const CLOUD_DOC_PATH = "bookData/main";
 let cloudDb = null, cloudRef = null, cloudUser = null, cloudReady = false;
