@@ -924,7 +924,7 @@ async function cloudPush(){
     await cloudRef.set({ d: DATA, updatedAt: firebase.firestore.FieldValue.serverTimestamp(), updatedBy: cloudUser.uid }, { merge: true });
     dirty = false;
     setStatus('저장됨 ' + new Date().toLocaleTimeString());
-  } catch (err) { console.error(err); setStatus('클라우드 저장 실패', 'dirty'); }
+  } catch (err) { console.error(err); setStatus(err && err.code === 'permission-denied' ? '권한 없음: 로그인·규칙 확인' : '클라우드 저장 실패', 'dirty'); }
 }
 function applyRemoteData(remote){
   applyingRemote = true;
@@ -969,7 +969,7 @@ function subscribeCloud(){
       return;
     }
     applyRemoteData(remote);
-  }, (err) => { console.error(err); setStatus('실시간 연결 실패', 'dirty'); });
+  }, (err) => { console.error(err); setStatus(err && err.code === 'permission-denied' ? '권한 없음: 로그인·규칙 확인' : '실시간 연결 실패', 'dirty'); });
 }
 function initCloud(){
   const btn = document.getElementById('btnLogin'), who = document.getElementById('cloudUser');
