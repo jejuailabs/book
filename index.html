@@ -197,6 +197,16 @@
     .f input,.f textarea{border-color:transparent;background:transparent}
     .f:not(.filled){display:none}
   }
+  .ovwrap{margin:0 4px 10px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:10px 12px}
+  .ovhead{font-size:12px;font-weight:700;color:#fcd34d;margin-bottom:8px}
+  .ov{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:6px}
+  .ov button{font:inherit;font-size:12px;font-weight:600;padding:6px 8px;border-radius:8px;border:1.5px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);color:#eee;cursor:pointer;display:flex;flex-direction:column;gap:2px;align-items:flex-start}
+  .ov button b{font-size:13px}
+  .ov button span{font-size:11px;opacity:.8;font-weight:500}
+  .ov button.done{border-color:#86efac;background:rgba(134,239,172,.15)}
+  .ov button.part{border-color:var(--gold)}
+  .ov button.empty{border-color:#f87171;background:rgba(248,113,113,.12)}
+  .ov button:hover{background:rgba(255,255,255,.2)}
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
@@ -713,11 +723,24 @@ function renderExtras(s){
   c+=`<form class="cform" data-cform="${s.id}"><div class="row"><input type="text" name="who" placeholder="이름 (닉네임)" value="${esc(load('me')||'')}"><select name="ref"><option value="">장 전체에 대한 의견</option>${refs}</select></div><textarea name="text" placeholder="의견을 적고 [의견 남기기]를 누르세요"></textarea><button type="submit">의견 남기기</button></form></div>`;
   return `<div class="extras">${x}${c}</div>`;
 }
+function tabStat(id){
+  const it=ITEMS[id]; if(!it) return {d:0,t:0,who:''};
+  let d=0; const t=it.fields.length;
+  for(const f of it.fields){const v=(DATA[key(it,f)]!==undefined?DATA[key(it,f)]:(f.def||'')); if(String(v).trim())d++;}
+  let who='';
+  for(const k of ['who','nick','members','title']){const f=it.fields.find(x=>x.k===k); if(f){who=String(DATA[key(it,f)]||'').trim(); if(who)break;}}
+  return {d,t,who};
+}
+function tabsOverview(s){
+  const tabs=tabsOf(s); if(!tabs||!tabs.length) return '';
+  return `<div class="ovwrap"><div class="ovhead">작성 현황 — 안 쓴 칸 빨강 · 다 쓴 칸 초록 · 누르면 이동</div><div class="ov">${tabs.map(t=>{const st=tabStat(t.id);const cls=st.d===0?'empty':(st.d===st.t?'done':'part');return `<button data-ov="${t.id}" data-goto-tab="${t.id}" class="${cls}">${esc(t.label)}<b>${st.d}/${st.t}</b>${st.who?`<span>${esc(st.who)}</span>`:''}</button>`}).join('')}</div></div>`;
+}
 function renderSlide(s, idx){
   let body='';
   if(s.custom==='cover') body=renderCover();
   else if(s.tabs){
     const tabs=tabsOf(s);let cur=load('tab.'+s.id);if(!tabs.some(t=>t.id===cur))cur=tabs[0].id;
+    body+=tabsOverview(s);
     body+=`<div class="tabs" data-slide="${s.id}">${tabs.map(t=>`<button data-tab="${t.id}" class="${t.id===cur?'on':''}">${t.label}</button>`).join('')}</div>`;
     for(const t of tabs){
       const it=ITEMS[t.id]; let sp='';
@@ -749,6 +772,7 @@ function refresh(){
   document.querySelectorAll('.slide').forEach(sl=>{let t=0,d=0;sl.querySelectorAll('[data-k]').forEach(el=>{t++;if(el.value.trim())d++});total+=t;done+=d;
     const c=sl.querySelector('[data-scnt]');if(c)c.textContent=`채움 ${d}/${t}`;const q=document.querySelector(`[data-qcnt="${sl.id}"]`);if(q)q.textContent=`${d}/${t}`});
   document.querySelectorAll('.tabs button').forEach(b=>{const p=document.querySelector(`[data-panel="${b.dataset.tab}"]`);if(!p)return;let t=0,d=0;p.querySelectorAll('[data-k]').forEach(el=>{t++;if(el.value.trim())d++});b.classList.toggle('done',t>0&&d===t)});
+  document.querySelectorAll('[data-ov]').forEach(b=>{const st=tabStat(b.dataset.ov);const lb=b.querySelector('b');if(lb)lb.textContent=st.d+'/'+st.t;b.classList.toggle('empty',st.d===0);b.classList.toggle('done',st.t>0&&st.d===st.t);b.classList.toggle('part',st.d>0&&st.d<st.t);let sp=b.querySelector('span');if(st.who){if(!sp){sp=document.createElement('span');b.appendChild(sp)}sp.textContent=st.who}else if(sp)sp.remove()});
   document.getElementById('progress').textContent=`채움 ${done} / ${total}`;
 }
 function setStatus(t,c){const s=document.getElementById('status');s.textContent=t;s.className=c||''}
@@ -785,6 +809,10 @@ document.addEventListener('click',e=>{const b=e.target.closest('.tabs button');i
   tabs.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));
   const sl=document.getElementById(sid);sl.querySelectorAll('.panel').forEach(p=>p.classList.toggle('on',p.dataset.panel===b.dataset.tab));
   save('tab.'+sid,b.dataset.tab);sl.querySelectorAll('.panel.on textarea').forEach(autoGrow)});
+document.addEventListener('click',e=>{const g=e.target.closest('[data-goto-tab]');if(!g)return;const id=g.dataset.gotoTab;const sl=g.closest('.slide');if(!sl)return;
+  const tb=sl.querySelector('.tabs');if(tb)tb.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x.dataset.tab===id));
+  sl.querySelectorAll('.panel').forEach(p=>p.classList.toggle('on',p.dataset.panel===id));
+  save('tab.'+sl.id,id);const p=sl.querySelector(`[data-panel="${id}"]`);if(p){p.querySelectorAll('textarea').forEach(autoGrow);p.scrollIntoView({block:'start'});}});
 
 /* ============ 페이지 넘기기 (회의록 대시보드 방식) ============ */
 const $=id=>document.getElementById(id);
