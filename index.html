@@ -119,6 +119,9 @@
   .tabs button.on{background:var(--terra);border-color:var(--terra);color:#fff}
   .tabs button.done{border-color:#86efac}
   .panel{display:none}.panel.on{display:block}
+  .teamhint{margin:2px 4px 6px;font-size:12.5px;color:#c9d2e8}
+  .teamtabs button{font-size:13px;padding:5px 16px}
+  .teamtabs button.on{box-shadow:0 0 0 2px rgba(217,103,58,.35)}
 
   /* 표지 목업 */
   .cover{background:var(--sand);padding:0;overflow:hidden}
@@ -466,10 +469,10 @@ const SLIDES=[
  {id:'prologue', title:'프롤로그', left:['pro1','pro2'], right:['pro3','pro4']},
  {id:'players', title:'PART 0 · 플레이어 카드', tabs:Array.from({length:11},(_,i)=>({id:'player'+pad(i+1),label:'P'+pad(i+1)})), custom:'player'},
  {id:'part0b', title:'PART 0 · 규칙과 3개의 문제', left:['rules'], right:['problems']},
- {id:'week1', title:'WEEK 1 · 문제를 찾다', left:['w1c1','w1c2','w1c3','w1end'], right:['w1conv','w1lab','w1tool','w1iv','w1lv'], rightCls:''},
- {id:'week2', title:'WEEK 2 · 문제를 정의하다', left:['w2c4','w2c5','w2c6','w2end'], right:['w2conv','w2lab','w2kakao','w2zoom','w2tool','w2iv','w2lv']},
- {id:'week3', title:'WEEK 3 · AI에게 만들어 보라고 했다', left:['w3c7','w3c8','w3c9','w3end'], right:['w3class','w3fail','w3tool','w3iv','w3lv']},
- {id:'week4', title:'WEEK 4 · 세상에 내놓다', left:['w4c10','w4c11','w4c12','w4end'], right:['w4tool','w4party','w4iv','w4lv']},
+ {id:'week1', title:'WEEK 1 · 문제를 찾다', teamTabs:true, left:['w1c1','w1c2','w1c3','w1end'], right:['w1conv','w1lab','w1tool','w1iv','w1lv'], rightCls:''},
+ {id:'week2', title:'WEEK 2 · 문제를 정의하다', teamTabs:true, left:['w2c4','w2c5','w2c6','w2end'], right:['w2conv','w2lab','w2kakao','w2zoom','w2tool','w2iv','w2lv']},
+ {id:'week3', title:'WEEK 3 · AI에게 만들어 보라고 했다', teamTabs:true, left:['w3c7','w3c8','w3c9','w3end'], right:['w3class','w3fail','w3tool','w3iv','w3lv']},
+ {id:'week4', title:'WEEK 4 · 세상에 내놓다', teamTabs:true, left:['w4c10','w4c11','w4c12','w4end'], right:['w4tool','w4party','w4iv','w4lv']},
  {id:'teams', title:'PART 5 · 세 팀의 결과물', tabs:[{id:'team-oreum',label:'오름 옆길'},{id:'team-health',label:'AI 건강 비서'},{id:'team-hero',label:'로컬 히어로'}], split:{left:['members','mission','p1','p23','p4'], right:['p56','p7','p8','toteam','link','words']}},
  {id:'interviews', title:'PART 6 · 11명의 인터뷰', tabs:Array.from({length:11},(_,i)=>({id:'iv'+pad(i+1),label:'인터뷰 '+pad(i+1)})), split:{left:['who','team','headline','s2','s31','s32','s41'], right:['s42','s43','s51','s52','s61','s62','editor']}},
  {id:'part6b', title:'PART 6 · 숫자·변화·다음 계획', left:['numbers','toteam'], right:['change','nextplans','lastline']},
@@ -634,30 +637,38 @@ function fallbackEx(f,item){const L=f.label||'';
   if(f.type==='area')return'예: 생각나는 대로 적으세요. 정리는 나중에 합니다.';
   return'';}
 
+/* ============ 1~4주차 팀 (WEEK 1~4 슬라이드 안에서 팀별 페이지로 나뉨) ============ */
+/* 팀 1 = 접두사 없음(기존에 입력된 주차 내용 그대로). 팀 2·3 = 키 앞에 t2:/t3: 접두사 → 각자 빈 페이지에서 시작 */
+const WEEK_TEAMS=[{id:'team1',label:'팀 1'},{id:'team2',label:'팀 2'},{id:'team3',label:'팀 3'}];
+const DEFAULT_TEAM='team1';
+const teamPfx=tid=>tid===DEFAULT_TEAM?'':tid+':';
+
 /* ============ 렌더 ============ */
-function field(item,f,extraCls){
+function field(item,f,extraCls,pfx){
   if(!f)return'';
-  const k=key(item,f), v=val(item,f);
-  const ph=f.ph||EX[k]||fallbackEx(f,item);
+  const bk=key(item,f), k=(pfx||'')+bk;
+  const dv=DATA[k], v=dv!==undefined?dv:(f.def||'');
+  const ph=f.ph||EX[bk]||fallbackEx(f,item);
   const inp=f.type==='area'
     ?`<textarea id="f-${k}" data-k="${k}" placeholder="${esc(ph)}">${esc(v)}</textarea>`
     :`<input type="text" id="f-${k}" data-k="${k}" value="${esc(v)}" placeholder="${esc(ph)}">`;
-  return `<div class="f${v.trim()?' filled':''}${extraCls?' '+extraCls:''}"><label for="f-${k}">${f.label}</label>${inp}</div>`;
+  return `<div class="f${String(v).trim()?' filled':''}${extraCls?' '+extraCls:''}"><label for="f-${k}">${f.label}</label>${inp}</div>`;
 }
-function itemBlock(item, keys){
+function itemBlock(item, keys, pfx){
+  const P=pfx||'';
   const fs = keys ? keys.map(k=>fld(item,k)).filter(Boolean) : item.fields;
   const g3=fs.filter(f=>f.cls==='g3'), rest=fs.filter(f=>f.cls!=='g3');
   const texts=rest.filter(f=>f.type==='text'), areas=rest.filter(f=>f.type==='area');
-  let h=`<div class="it" id="item-${item.id}${keys?'-'+keys[0]:''}" data-item="${item.id}"><h3>${item.title}<span class="cnt"></span></h3>`;
+  let h=`<div class="it" id="item-${P}${item.id}${keys?'-'+keys[0]:''}" data-item="${P}${item.id}"><h3>${item.title}<span class="cnt"></span></h3>`;
   if(item.spec) h+=`<div class="spec">${item.spec}</div>`;
-  if(texts.length){h+=`<div class="g2">`;for(const f of texts)h+=field(item,f);h+=`</div>`}
-  if(g3.length){h+=`<div class="g3">`;for(const f of g3)h+=field(item,f);h+=`</div>`}
-  for(const f of areas)h+=field(item,f);
+  if(texts.length){h+=`<div class="g2">`;for(const f of texts)h+=field(item,f,'',P);h+=`</div>`}
+  if(g3.length){h+=`<div class="g3">`;for(const f of g3)h+=field(item,f,'',P);h+=`</div>`}
+  for(const f of areas)h+=field(item,f,'',P);
   return h+`</div>`;
 }
-function pageHtml(side, ids, folio, cls){
+function pageHtml(side, ids, folio, cls, pfx){
   let h=`<div class="pg ${side}${cls?' '+cls:''}">`;
-  for(const id of ids){const it=ITEMS[id]; if(it) h+=itemBlock(it)}
+  for(const id of ids){const it=ITEMS[id]; if(it) h+=itemBlock(it,null,pfx)}
   return h+`<div class="folio">${folio}</div></div>`;
 }
 function spread(leftHtml,rightHtml){return `<div class="spread">${leftHtml}${rightHtml}</div>`}
@@ -739,6 +750,19 @@ function tabsOverview(s){
 function renderSlide(s, idx){
   let body='';
   if(s.custom==='cover') body=renderCover();
+  else if(s.teamTabs){
+    /* WEEK 1~4: 한 주차 안에서 팀별 페이지로 나뉜다. 각 팀 = 자기만의 입력 칸(팀 2·3은 t2:/t3: 접두사) */
+    const opts=WEEK_TEAMS.map(t=>({tid:s.id+'--'+t.id, team:t.id, label:t.label}));
+    let curT=load('tab.'+s.id); if(!opts.some(o=>o.tid===curT)) curT=opts[0].tid;
+    body+=`<div class="teamhint">이 주차를 어느 <b>팀</b>이 작성할지 고르세요. 팀마다 페이지가 따로 저장됩니다.</div>`;
+    body+=`<div class="tabs teamtabs" data-slide="${s.id}">${opts.map(o=>`<button data-tab="${o.tid}" class="${o.tid===curT?'on':''}">${esc(o.label)}</button>`).join('')}</div>`;
+    for(const o of opts){
+      const pfx=teamPfx(o.team);
+      const L=pageHtml('left', s.left, s.title+' · '+o.label, '', pfx);
+      const R=pageHtml('right', s.right, s.title+' · 장치 · '+o.label, s.rightCls||'', pfx);
+      body+=`<div class="panel${o.tid===curT?' on':''}" data-panel="${o.tid}">${spread(L,R)}</div>`;
+    }
+  }
   else if(s.tabs){
     const tabs=tabsOf(s);let cur=load('tab.'+s.id);if(!tabs.some(t=>t.id===cur))cur=tabs[0].id;
     body+=tabsOverview(s);
@@ -904,11 +928,14 @@ function strip(s){return String(s).replace(/<[^>]+>/g,'').replace(/\s+/g,' ').tr
 function buildMd(){const ds=new Date().toISOString().slice(0,10);const inScope=id=>itemInScope(id,SCOPE);
   let md=`# 책 뼈대 — 입력 내용 (${ds})${SCOPE.length?' · 부분: '+scopeLabel():''}\n\n`;
   for(const part of BOOK){const items=part.items.filter(it=>inScope(it.id));if(!items.length)continue;md+=`## ${strip(part.title)}${part.pages?' ('+part.pages+')':''}\n\n`;if(part.intro)md+=`> ${strip(part.intro)}\n\n`;
-    for(const item of items){md+=`### ${strip(item.title)}\n\n`;if(item.spec)md+=`_${strip(item.spec)}_\n\n`;
-      for(const f of item.fields){const v=(DATA[key(item,f)]!==undefined?DATA[key(item,f)]:(f.def||'')).trim();
-        if(!v){md+=`- **${strip(f.label)}**: (비어 있음)\n`;continue}
-        if(v.includes('\n'))md+=`- **${strip(f.label)}**:\n\n${v.split('\n').map(l=>'  '+l).join('\n')}\n\n`;else md+=`- **${strip(f.label)}**: ${v}\n`}
-      md+='\n'}}
+    const isWk=/^week[1-4]$/.test(part.id);                                   /* 1~4주차는 팀별로 나눠서 내보냄 */
+    const passes=isWk?WEEK_TEAMS.map(t=>({pfx:teamPfx(t.id),label:t.label})):[{pfx:'',label:''}];
+    for(const pass of passes){ if(isWk)md+=`### 〔${pass.label}〕\n\n`;
+      for(const item of items){md+=`${isWk?'#### ':'### '}${strip(item.title)}\n\n`;if(item.spec)md+=`_${strip(item.spec)}_\n\n`;
+        for(const f of item.fields){const v=(DATA[pass.pfx+key(item,f)]!==undefined?DATA[pass.pfx+key(item,f)]:(f.def||'')).trim();
+          if(!v){md+=`- **${strip(f.label)}**: (비어 있음)\n`;continue}
+          if(v.includes('\n'))md+=`- **${strip(f.label)}**:\n\n${v.split('\n').map(l=>'  '+l).join('\n')}\n\n`;else md+=`- **${strip(f.label)}**: ${v}\n`}
+        md+='\n'}}}
   /* 장별 추가 항목과 의견 */
   let xs='',cs='';
   for(const s of ACTIVE){const ci=customItems(s.id);if(ci.length){xs+=`### ${strip(s.title)}\n\n`;for(const c of ci){xs+=`#### ${(c.title||'').trim()||'(이름 없는 항목)'}\n\n${(c.text||'').trim()||'(비어 있음)'}\n\n`}}
