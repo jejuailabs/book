@@ -122,6 +122,35 @@
   .teamhint{margin:2px 4px 6px;font-size:12.5px;color:#c9d2e8}
   .teamtabs button{font-size:13px;padding:5px 16px}
   .teamtabs button.on{box-shadow:0 0 0 2px rgba(217,103,58,.35)}
+  /* 대시보드 */
+  .dashwrap{padding:2px 2px 30px}
+  .dgrid{display:grid;gap:14px;max-width:1040px;margin:0 auto;grid-template-columns:1fr 1fr}
+  .dcard{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:14px;padding:16px 18px;box-shadow:0 2px 10px rgba(0,0,0,.18)}
+  .dcard.dfull,.dcard.dmenu{grid-column:1 / -1}
+  .dh{font-weight:800;font-size:15px;margin-bottom:12px;color:var(--navy)}
+  .dfull .big{font-size:46px;font-weight:800;line-height:1;color:var(--terra)}
+  .dfull .big span{font-size:22px;margin-left:2px}
+  .dsub{margin-top:6px;color:var(--muted);font-size:13px}
+  .pbar{height:9px;border-radius:6px;background:var(--line);overflow:hidden;margin:4px 0}
+  .pbar i{display:block;height:100%;background:var(--terra);border-radius:6px;transition:width .3s}
+  .pbar.lg{height:14px;margin:10px 0 2px}
+  .drow{display:grid;grid-template-columns:64px 1fr 108px;gap:12px;align-items:center;padding:7px 6px;border-radius:8px;text-decoration:none;color:var(--ink)}
+  .drow:hover{background:var(--sand)}
+  .drow .rl{font-weight:700}
+  .drow .rn,.pcell .rn,.mcell .rn{font-size:12px;color:var(--muted);text-align:right;white-space:nowrap}
+  .pgrid,.mgrid{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}
+  .pcell,.mcell{display:block;text-align:left;background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;text-decoration:none;color:var(--ink);font:inherit}
+  .pcell:hover,.mcell:hover{border-color:var(--terra);box-shadow:0 2px 8px rgba(217,103,58,.2)}
+  .pcell .pn{font-weight:800;color:var(--terra)}
+  .pcell .pnm{color:var(--muted);font-size:13px}
+  .pcell .rn,.mcell .rn{display:block;text-align:left;margin-top:2px}
+  .mcell{display:grid;grid-template-columns:26px 1fr;grid-template-areas:"n t" "b b" "r r";gap:2px 8px;align-items:center}
+  .mcell .mn{grid-area:n;font-weight:800;color:var(--navy)}
+  .mcell .mt{grid-area:t;font-weight:600}
+  .mcell .pbar{grid-area:b;margin-top:6px}
+  .mcell .rn{grid-area:r}
+  .qhome{font-weight:700}
+  @media(max-width:640px){.dgrid{grid-template-columns:1fr}}
 
   /* 표지 목업 */
   .cover{background:var(--sand);padding:0;overflow:hidden}
@@ -748,6 +777,7 @@ function tabsOverview(s){
   return `<div class="ovwrap"><div class="ovhead">작성 현황 — 안 쓴 칸 빨강 · 다 쓴 칸 초록 · 누르면 이동</div><div class="ov">${tabs.map(t=>{const st=tabStat(t.id);const cls=st.d===0?'empty':(st.d===st.t?'done':'part');return `<button data-ov="${t.id}" data-goto-tab="${t.id}" class="${cls}">${esc(t.label)}<b>${st.d}/${st.t}</b>${st.who?`<span>${esc(st.who)}</span>`:''}</button>`}).join('')}</div></div>`;
 }
 function renderSlide(s, idx){
+  if(s.dashboard) return `<section class="slide dashboard" id="home" data-title="대시보드"><div class="slide-h"><b>대시보드 · 전체 진행 상황</b></div>${renderDashboard()}</section>`;
   let body='';
   if(s.custom==='cover') body=renderCover();
   else if(s.teamTabs){
@@ -778,11 +808,48 @@ function renderSlide(s, idx){
     const rightCls = s.right.some(id=>TOOLBOX.has(id)) ? '' : '';
     body=spread(pageHtml('left',s.left,s.title,''), pageHtml('right',s.right,s.title+' · 장치',rightCls));
   }
-  return `<section class="slide" id="${s.id}" data-title="${esc(s.title)}"><div class="slide-h"><b>${idx+1}. ${s.title}</b><span class="cnt" data-scnt="${s.id}"></span></div>${body}${renderExtras(s)}</section>`;
+  const num=SLIDES.indexOf(s)+1;
+  return `<section class="slide" id="${s.id}" data-title="${esc(s.title)}"><div class="slide-h"><b>${num}. ${s.title}</b><span class="cnt" data-scnt="${s.id}"></span></div>${body}${renderExtras(s)}</section>`;
 }
+/* ============ 대시보드 (메인 홈) ============ */
+const HOME={id:'home',title:'대시보드',dashboard:true};
+function fieldDone(item,f,pfx){const v=DATA[(pfx||'')+key(item,f)];return String(v!==undefined?v:(f.def||'')).trim()!==''}
+function countIds(ids,pfx){let d=0,t=0;for(const id of ids){const it=ITEMS[id];if(!it)continue;for(const f of it.fields){t++;if(fieldDone(it,f,pfx))d++}}return {d,t}}
+function slideItemList(s){return s.custom==='cover'?COVER_ITEMS:(s.tabs?s.tabs.map(t=>t.id):[...(s.left||[]),...(s.right||[])])}
+function slideProgress(s){
+  if(s.teamTabs){let d=0,t=0;for(const tm of WEEK_TEAMS){const r=countIds([...s.left,...s.right],teamPfx(tm.id));d+=r.d;t+=r.t}return {d,t}}
+  return countIds(slideItemList(s));
+}
+function teamWeekProgress(tid){let d=0,t=0;for(const s of SLIDES)if(s.teamTabs){const r=countIds([...s.left,...s.right],teamPfx(tid));d+=r.d;t+=r.t}return {d,t}}
+function personProgress(nn){return countIds(['player'+nn,'iv'+nn])}
+function personName(nn){return String(DATA['player'+nn+'.nick']||DATA['iv'+nn+'.who']||'').trim()||('P'+nn)}
+function overallProgress(){let d=0,t=0;for(const s of SLIDES){const r=slideProgress(s);d+=r.d;t+=r.t}return {d,t}}
+const pct=p=>p.t?Math.round(p.d/p.t*100):0;
+const bar=(p,cls)=>`<div class="pbar${cls?' '+cls:''}"><i style="width:${pct(p)}%"></i></div>`;
+function dashInner(){
+  const ov=overallProgress();
+  let h=`<div class="dgrid">`;
+  h+=`<div class="dcard dfull"><div class="dh">전체 진행</div><div class="big">${pct(ov)}<span>%</span></div>${bar(ov,'lg')}<div class="dsub">입력 ${ov.d} / ${ov.t}칸</div></div>`;
+  h+=`<div class="dcard"><div class="dh">팀별 진행 · 1~4주차</div>`;
+  for(const tm of WEEK_TEAMS){const p=teamWeekProgress(tm.id);h+=`<a class="drow" href="#week1"><span class="rl">${esc(tm.label)}</span>${bar(p)}<span class="rn">${p.d}/${p.t} · ${pct(p)}%</span></a>`}
+  h+=`</div>`;
+  h+=`<div class="dcard"><div class="dh">개인별 진행 · 플레이어카드+인터뷰</div><div class="pgrid">`;
+  for(let i=1;i<=11;i++){const nn=pad(i);const p=personProgress(nn);h+=`<button type="button" class="pcell" data-jump="players" data-jtab="player${nn}"><span class="pn">P${nn}</span> <span class="pnm">${esc(personName(nn))}</span>${bar(p)}<span class="rn">${pct(p)}%</span></button>`}
+  h+=`</div></div>`;
+  h+=`<div class="dcard dmenu"><div class="dh">메뉴 · 1~15 (누르면 그 화면으로)</div><div class="mgrid">`;
+  for(const s of SLIDES){const n=SLIDES.indexOf(s)+1;const p=slideProgress(s);h+=`<a class="mcell" href="#${s.id}"><span class="mn">${n}</span><span class="mt">${esc(SHORT[s.id]||s.title)}</span>${bar(p)}<span class="rn">${p.d}/${p.t}</span></a>`}
+  h+=`</div></div>`;
+  return h+`</div>`;
+}
+function renderDashboard(){return `<div class="dashwrap">${dashInner()}</div>`}
+function updateDashboard(){const w=document.querySelector('#home .dashwrap');if(w)w.innerHTML=dashInner()}
+
 function render(){
-  document.getElementById('app').innerHTML=ACTIVE.map(renderSlide).join('');
-  document.getElementById('quick').innerHTML=ACTIVE.map(s=>`<a href="#${s.id}" title="${esc(s.title)}">${SLIDES.indexOf(s)+1}. ${SHORT[s.id]||s.title}<span class="n" data-qcnt="${s.id}"></span></a>`).join('');
+  const VIEW = SCOPE.length ? ACTIVE : [HOME].concat(ACTIVE);
+  document.getElementById('app').innerHTML=VIEW.map(renderSlide).join('');
+  document.getElementById('quick').innerHTML=VIEW.map(s=>s.dashboard
+    ?`<a href="#home" class="qhome" title="대시보드">🏠 대시보드</a>`
+    :`<a href="#${s.id}" title="${esc(s.title)}">${SLIDES.indexOf(s)+1}. ${SHORT[s.id]||s.title}<span class="n" data-qcnt="${s.id}"></span></a>`).join('');
   const sb=document.getElementById('scopebar');
   if(SCOPE.length){sb.innerHTML=`<b>부분 작업 파일</b> 담긴 것: ${esc(scopeLabel())} &nbsp;·&nbsp; 채운 뒤 <b>파일로 저장</b>해서 취합 담당에게 보내면, 전체 파일에서 <b>부분 파일 합치기</b>로 모읍니다.`;sb.classList.add('show')}
   document.querySelectorAll('textarea').forEach(autoGrow);
@@ -799,6 +866,7 @@ function refresh(){
   document.querySelectorAll('.tabs button').forEach(b=>{const p=document.querySelector(`[data-panel="${b.dataset.tab}"]`);if(!p)return;let t=0,d=0;p.querySelectorAll('[data-k]').forEach(el=>{t++;if(el.value.trim())d++});b.classList.toggle('done',t>0&&d===t)});
   document.querySelectorAll('[data-ov]').forEach(b=>{const st=tabStat(b.dataset.ov);const lb=b.querySelector('b');if(lb)lb.textContent=st.d+'/'+st.t;b.classList.toggle('empty',st.d===0);b.classList.toggle('done',st.t>0&&st.d===st.t);b.classList.toggle('part',st.d>0&&st.d<st.t);let sp=b.querySelector('span');if(st.who){if(!sp){sp=document.createElement('span');b.appendChild(sp)}sp.textContent=st.who}else if(sp)sp.remove()});
   document.getElementById('progress').textContent=`입력 ${done} / ${total}칸`;
+  const dv=document.querySelector('#home.on .dashwrap');if(dv)dv.innerHTML=dashInner();
 }
 function setStatus(t,c){const s=document.getElementById('status');s.textContent=t;s.className=c||''}
 
@@ -823,6 +891,10 @@ document.addEventListener('click',e=>{
   const del=e.target.closest('[data-del]');if(del){const id=del.dataset.del;const t=(DATA[id+'.title']||'').trim();if(!confirm(`추가 항목${t?' "'+t+'"':''}을 지울까요?`))return;delete DATA[id+'.title'];delete DATA[id+'.text'];touch();rerenderSlide(slideOf(id));return}
   const cd=e.target.closest('[data-cdel]');if(cd){const id=cd.dataset.cdel;if(!confirm('이 의견을 지울까요?'))return;for(const k of ['who','text','time','ref'])delete DATA[id+'.'+k];touch();rerenderSlide(slideOf(id));return}
 });
+/* 대시보드 → 특정 탭으로 바로 이동 (개인별 카드 등) */
+document.addEventListener('click',e=>{const j=e.target.closest('[data-jump]');if(!j)return;e.preventDefault();const sid=j.dataset.jump,tid=j.dataset.jtab;
+  if(tid){save('tab.'+sid,tid);if(document.getElementById(sid))rerenderSlide(sid);}
+  goTo(sid);});
 document.addEventListener('submit',e=>{const f=e.target.closest('form[data-cform]');if(!f)return;e.preventDefault();
   const who=f.who.value.trim(),text=f.text.value.trim(),ref=f.ref.value;if(!text){f.text.focus();return}
   const id='c-'+f.dataset.cform+'-'+uid();DATA[id+'.who']=who;DATA[id+'.text']=text;DATA[id+'.ref']=ref;DATA[id+'.time']=new Date().toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
@@ -851,6 +923,7 @@ function show(i,scroll){
   document.querySelectorAll('.quick a').forEach(a=>a.classList.toggle('cur',a.getAttribute('href')==='#'+ps[i].id));
   save('page',String(i));try{history.replaceState(null,'','#'+ps[i].id)}catch(e){}
   ps[i].querySelectorAll('textarea').forEach(autoGrow);
+  if(ps[i].id==='home')updateDashboard();
   if(scroll!==false)window.scrollTo({top:0});
 }
 function goTo(id){const el=document.getElementById(id);if(!el)return false;if(document.body.classList.contains('all'))return false;const p=el.closest('.slide');const i=pages().indexOf(p);if(i<0)return false;show(i);if(el!==p)setTimeout(()=>el.scrollIntoView({block:'start'}),0);return true}
