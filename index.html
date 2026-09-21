@@ -124,9 +124,18 @@
   .teamtabs button.on{box-shadow:0 0 0 2px rgba(217,103,58,.35)}
   /* 대시보드 */
   .dashwrap{padding:2px 2px 30px}
-  .dgrid{display:grid;gap:14px;max-width:1040px;margin:0 auto;grid-template-columns:1fr 1fr}
+  .dgrid{display:grid;gap:14px;max-width:1040px;margin:0 auto;grid-template-columns:1fr}
   .dcard{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:14px;padding:16px 18px;box-shadow:0 2px 10px rgba(0,0,0,.18)}
-  .dcard.dfull,.dcard.dmenu{grid-column:1 / -1}
+  .tmatrix{display:grid;grid-template-columns:52px repeat(4,1fr) 78px;gap:6px;align-items:center}
+  .tmatrix .th{font-size:11px;color:var(--muted);text-align:center;font-weight:700}
+  .tmatrix .th:first-child{text-align:left}
+  .tmatrix .trl{font-weight:800;font-size:13px;color:var(--navy)}
+  .tcell{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:6px 5px;cursor:pointer;font:inherit;color:var(--ink);text-align:center}
+  .tcell:hover{border-color:var(--terra);box-shadow:0 1px 6px rgba(217,103,58,.2)}
+  .tcell b{display:block;font-size:12px;margin-bottom:4px;font-weight:700}
+  .tcell.ttot b{color:var(--terra)}
+  .pbar.sm{height:6px;margin:0}
+  @media(max-width:640px){.tmatrix{grid-template-columns:40px repeat(4,1fr) 56px;gap:4px}.tmatrix .th{font-size:9px}.tcell{padding:5px 2px}.tcell b{font-size:10.5px}}
   .dh{font-weight:800;font-size:15px;margin-bottom:12px;color:var(--navy)}
   .dfull .big{font-size:46px;font-weight:800;line-height:1;color:var(--terra)}
   .dfull .big span{font-size:22px;margin-left:2px}
@@ -830,9 +839,17 @@ function dashInner(){
   const ov=overallProgress();
   let h=`<div class="dgrid">`;
   h+=`<div class="dcard dfull"><div class="dh">전체 진행</div><div class="big">${pct(ov)}<span>%</span></div>${bar(ov,'lg')}<div class="dsub">입력 ${ov.d} / ${ov.t}칸</div></div>`;
-  h+=`<div class="dcard"><div class="dh">팀별 진행 · 1~4주차</div>`;
-  for(const tm of WEEK_TEAMS){const p=teamWeekProgress(tm.id);h+=`<a class="drow" href="#week1"><span class="rl">${esc(tm.label)}</span>${bar(p)}<span class="rn">${p.d}/${p.t} · ${pct(p)}%</span></a>`}
-  h+=`</div>`;
+  const weekSlides=SLIDES.filter(s=>s.teamTabs);
+  h+=`<div class="dcard dteam"><div class="dh">팀별 진행 · 주차별 (칸을 누르면 그 팀·주차로 이동)</div><div class="tmatrix">`;
+  h+=`<div class="th"></div>`+weekSlides.map(s=>`<div class="th">${esc(SHORT[s.id]||s.title)}</div>`).join('')+`<div class="th">합계</div>`;
+  for(const tm of WEEK_TEAMS){
+    h+=`<div class="trl">${esc(tm.label)}</div>`;
+    for(const s of weekSlides){const p=countIds([...s.left,...s.right],teamPfx(tm.id));
+      h+=`<button type="button" class="tcell" data-teamjump="${tm.id}" data-week="${s.id}" title="${esc(tm.label)} · ${esc(SHORT[s.id]||s.title)}"><b>${p.d}/${p.t}</b>${bar(p,'sm')}</button>`}
+    const tot=teamWeekProgress(tm.id);
+    h+=`<button type="button" class="tcell ttot" data-teamjump="${tm.id}" data-week="week1" title="${esc(tm.label)} 1~4주차 합계"><b>${pct(tot)}%</b>${bar(tot,'sm')}</button>`;
+  }
+  h+=`</div></div>`;
   h+=`<div class="dcard"><div class="dh">개인별 진행 · 플레이어카드+인터뷰</div><div class="pgrid">`;
   for(let i=1;i<=11;i++){const nn=pad(i);const p=personProgress(nn);h+=`<button type="button" class="pcell" data-jump="players" data-jtab="player${nn}"><span class="pn">P${nn}</span> <span class="pnm">${esc(personName(nn))}</span>${bar(p)}<span class="rn">${pct(p)}%</span></button>`}
   h+=`</div></div>`;
@@ -895,6 +912,11 @@ document.addEventListener('click',e=>{
 document.addEventListener('click',e=>{const j=e.target.closest('[data-jump]');if(!j)return;e.preventDefault();const sid=j.dataset.jump,tid=j.dataset.jtab;
   if(tid){save('tab.'+sid,tid);if(document.getElementById(sid))rerenderSlide(sid);}
   goTo(sid);});
+/* 대시보드 팀별 주차 매트릭스 → 그 팀 탭으로 맞춰서 해당 주차로 이동 (1~4주차 모두 그 팀으로 세팅) */
+document.addEventListener('click',e=>{const j=e.target.closest('[data-teamjump]');if(!j)return;e.preventDefault();
+  const tid=j.dataset.teamjump, wk=j.dataset.week||'week1';
+  for(const s of SLIDES) if(s.teamTabs){save('tab.'+s.id, s.id+'--'+tid);if(document.getElementById(s.id))rerenderSlide(s.id);}
+  goTo(wk);});
 document.addEventListener('submit',e=>{const f=e.target.closest('form[data-cform]');if(!f)return;e.preventDefault();
   const who=f.who.value.trim(),text=f.text.value.trim(),ref=f.ref.value;if(!text){f.text.focus();return}
   const id='c-'+f.dataset.cform+'-'+uid();DATA[id+'.who']=who;DATA[id+'.text']=text;DATA[id+'.ref']=ref;DATA[id+'.time']=new Date().toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
