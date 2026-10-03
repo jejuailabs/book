@@ -126,7 +126,8 @@
   .dashwrap{padding:2px 2px 30px}
   .dgrid{display:grid;gap:14px;max-width:1040px;margin:0 auto;grid-template-columns:1fr}
   .dcard{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:14px;padding:16px 18px;box-shadow:0 2px 10px rgba(0,0,0,.18)}
-  .tmatrix{display:grid;grid-template-columns:52px repeat(4,1fr) 78px;gap:6px;align-items:center}
+  .tmatrix{display:grid;grid-template-columns:92px repeat(3,1fr) 78px;gap:6px;align-items:center}
+  .w1row{margin-bottom:12px}
   .tmatrix .th{font-size:11px;color:var(--muted);text-align:center;font-weight:700}
   .tmatrix .th:first-child{text-align:left}
   .tmatrix .trl{font-weight:800;font-size:13px;color:var(--navy)}
@@ -135,7 +136,7 @@
   .tcell b{display:block;font-size:12px;margin-bottom:4px;font-weight:700}
   .tcell.ttot b{color:var(--terra)}
   .pbar.sm{height:6px;margin:0}
-  @media(max-width:640px){.tmatrix{grid-template-columns:40px repeat(4,1fr) 56px;gap:4px}.tmatrix .th{font-size:9px}.tcell{padding:5px 2px}.tcell b{font-size:10.5px}}
+  @media(max-width:640px){.tmatrix{grid-template-columns:62px repeat(3,1fr) 56px;gap:4px}.tmatrix .th{font-size:9px}.tmatrix .trl{font-size:11px}.tcell{padding:5px 2px}.tcell b{font-size:10.5px}}
   .dh{font-weight:800;font-size:15px;margin-bottom:12px;color:var(--navy)}
   .dfull .big{font-size:46px;font-weight:800;line-height:1;color:var(--terra)}
   .dfull .big span{font-size:22px;margin-left:2px}
@@ -676,8 +677,11 @@ function fallbackEx(f,item){const L=f.label||'';
   return'';}
 
 /* ============ 1~4주차 팀 (WEEK 1~4 슬라이드 안에서 팀별 페이지로 나뉨) ============ */
-/* 팀 1 = 접두사 없음(기존에 입력된 주차 내용 그대로). 팀 2·3 = 키 앞에 t2:/t3: 접두사 → 각자 빈 페이지에서 시작 */
-const WEEK_TEAMS=[{id:'team1',label:'팀 1'},{id:'team2',label:'팀 2'},{id:'team3',label:'팀 3'}];
+/* team1 = 접두사 없음(기존에 입력된 주차 내용 그대로). team2·3 = 키 앞에 team2:/team3: 접두사 */
+/* WEEK 1은 '총괄' 한 페이지(team1 데이터), WEEK 2~4는 세 팀(team1=오름 옆길, team2=AI 건강 비서, team3=로컬 히어로) */
+const WEEK1_TEAMS=[{id:'team1',label:'총괄'}];
+const WEEK_TEAMS=[{id:'team1',label:'오름 옆길'},{id:'team2',label:'AI 건강 비서'},{id:'team3',label:'로컬 히어로'}];
+const teamsOf=sid=>sid==='week1'?WEEK1_TEAMS:WEEK_TEAMS;
 const DEFAULT_TEAM='team1';
 const teamPfx=tid=>tid===DEFAULT_TEAM?'':tid+':';
 
@@ -791,9 +795,9 @@ function renderSlide(s, idx){
   if(s.custom==='cover') body=renderCover();
   else if(s.teamTabs){
     /* WEEK 1~4: 한 주차 안에서 팀별 페이지로 나뉜다. 각 팀 = 자기만의 입력 칸(팀 2·3은 t2:/t3: 접두사) */
-    const opts=WEEK_TEAMS.map(t=>({tid:s.id+'--'+t.id, team:t.id, label:t.label}));
+    const opts=teamsOf(s.id).map(t=>({tid:s.id+'--'+t.id, team:t.id, label:t.label}));
     let curT=load('tab.'+s.id); if(!opts.some(o=>o.tid===curT)) curT=opts[0].tid;
-    body+=`<div class="teamhint">이 주차를 어느 <b>팀</b>이 작성할지 고르세요. 팀마다 페이지가 따로 저장됩니다.</div>`;
+    if(opts.length>1) body+=`<div class="teamhint">이 주차를 어느 <b>팀</b>이 작성할지 고르세요. 팀마다 페이지가 따로 저장됩니다.</div>`;
     body+=`<div class="tabs teamtabs" data-slide="${s.id}">${opts.map(o=>`<button data-tab="${o.tid}" class="${o.tid===curT?'on':''}">${esc(o.label)}</button>`).join('')}</div>`;
     for(const o of opts){
       const pfx=teamPfx(o.team);
@@ -826,10 +830,10 @@ function fieldDone(item,f,pfx){const v=DATA[(pfx||'')+key(item,f)];return String
 function countIds(ids,pfx){let d=0,t=0;for(const id of ids){const it=ITEMS[id];if(!it)continue;for(const f of it.fields){t++;if(fieldDone(it,f,pfx))d++}}return {d,t}}
 function slideItemList(s){return s.custom==='cover'?COVER_ITEMS:(s.tabs?s.tabs.map(t=>t.id):[...(s.left||[]),...(s.right||[])])}
 function slideProgress(s){
-  if(s.teamTabs){let d=0,t=0;for(const tm of WEEK_TEAMS){const r=countIds([...s.left,...s.right],teamPfx(tm.id));d+=r.d;t+=r.t}return {d,t}}
+  if(s.teamTabs){let d=0,t=0;for(const tm of teamsOf(s.id)){const r=countIds([...s.left,...s.right],teamPfx(tm.id));d+=r.d;t+=r.t}return {d,t}}
   return countIds(slideItemList(s));
 }
-function teamWeekProgress(tid){let d=0,t=0;for(const s of SLIDES)if(s.teamTabs){const r=countIds([...s.left,...s.right],teamPfx(tid));d+=r.d;t+=r.t}return {d,t}}
+function teamWeekProgress(tid){let d=0,t=0;for(const s of SLIDES)if(s.teamTabs&&s.id!=='week1'){const r=countIds([...s.left,...s.right],teamPfx(tid));d+=r.d;t+=r.t}return {d,t}}
 function personProgress(nn){return countIds(['player'+nn,'iv'+nn])}
 function personName(nn){return String(DATA['player'+nn+'.nick']||DATA['iv'+nn+'.who']||'').trim()||('P'+nn)}
 function overallProgress(){let d=0,t=0;for(const s of SLIDES){const r=slideProgress(s);d+=r.d;t+=r.t}return {d,t}}
@@ -839,15 +843,18 @@ function dashInner(){
   const ov=overallProgress();
   let h=`<div class="dgrid">`;
   h+=`<div class="dcard dfull"><div class="dh">전체 진행</div><div class="big">${pct(ov)}<span>%</span></div>${bar(ov,'lg')}<div class="dsub">입력 ${ov.d} / ${ov.t}칸</div></div>`;
-  const weekSlides=SLIDES.filter(s=>s.teamTabs);
-  h+=`<div class="dcard dteam"><div class="dh">팀별 진행 · 주차별 (칸을 누르면 그 팀·주차로 이동)</div><div class="tmatrix">`;
+  const weekSlides=SLIDES.filter(s=>s.teamTabs&&s.id!=='week1');
+  const w1=SLIDES.find(s=>s.id==='week1'), w1p=w1?slideProgress(w1):{d:0,t:0};
+  h+=`<div class="dcard dteam"><div class="dh">팀별 진행 · 주차별 (칸을 누르면 그 팀·주차로 이동)</div>`;
+  if(w1)h+=`<a class="mcell w1row" href="#week1"><span class="mn">W1</span><span class="mt">WEEK 1 · 총괄</span>${bar(w1p)}<span class="rn">${w1p.d}/${w1p.t}</span></a>`;
+  h+=`<div class="tmatrix">`;
   h+=`<div class="th"></div>`+weekSlides.map(s=>`<div class="th">${esc(SHORT[s.id]||s.title)}</div>`).join('')+`<div class="th">합계</div>`;
   for(const tm of WEEK_TEAMS){
     h+=`<div class="trl">${esc(tm.label)}</div>`;
     for(const s of weekSlides){const p=countIds([...s.left,...s.right],teamPfx(tm.id));
       h+=`<button type="button" class="tcell" data-teamjump="${tm.id}" data-week="${s.id}" title="${esc(tm.label)} · ${esc(SHORT[s.id]||s.title)}"><b>${p.d}/${p.t}</b>${bar(p,'sm')}</button>`}
     const tot=teamWeekProgress(tm.id);
-    h+=`<button type="button" class="tcell ttot" data-teamjump="${tm.id}" data-week="week1" title="${esc(tm.label)} 1~4주차 합계"><b>${pct(tot)}%</b>${bar(tot,'sm')}</button>`;
+    h+=`<button type="button" class="tcell ttot" data-teamjump="${tm.id}" data-week="week2" title="${esc(tm.label)} 2~4주차 합계"><b>${pct(tot)}%</b>${bar(tot,'sm')}</button>`;
   }
   h+=`</div></div>`;
   h+=`<div class="dcard"><div class="dh">개인별 진행 · 플레이어카드+인터뷰</div><div class="pgrid">`;
@@ -912,10 +919,10 @@ document.addEventListener('click',e=>{
 document.addEventListener('click',e=>{const j=e.target.closest('[data-jump]');if(!j)return;e.preventDefault();const sid=j.dataset.jump,tid=j.dataset.jtab;
   if(tid){save('tab.'+sid,tid);if(document.getElementById(sid))rerenderSlide(sid);}
   goTo(sid);});
-/* 대시보드 팀별 주차 매트릭스 → 그 팀 탭으로 맞춰서 해당 주차로 이동 (1~4주차 모두 그 팀으로 세팅) */
+/* 대시보드 팀별 주차 매트릭스 → 그 팀 탭으로 맞춰서 해당 주차로 이동 (2~4주차 모두 그 팀으로 세팅) */
 document.addEventListener('click',e=>{const j=e.target.closest('[data-teamjump]');if(!j)return;e.preventDefault();
-  const tid=j.dataset.teamjump, wk=j.dataset.week||'week1';
-  for(const s of SLIDES) if(s.teamTabs){save('tab.'+s.id, s.id+'--'+tid);if(document.getElementById(s.id))rerenderSlide(s.id);}
+  const tid=j.dataset.teamjump, wk=j.dataset.week||'week2';
+  for(const s of SLIDES) if(s.teamTabs&&teamsOf(s.id).some(t=>t.id===tid)){save('tab.'+s.id, s.id+'--'+tid);if(document.getElementById(s.id))rerenderSlide(s.id);}
   goTo(wk);});
 document.addEventListener('submit',e=>{const f=e.target.closest('form[data-cform]');if(!f)return;e.preventDefault();
   const who=f.who.value.trim(),text=f.text.value.trim(),ref=f.ref.value;if(!text){f.text.focus();return}
@@ -1024,7 +1031,7 @@ function buildMd(){const ds=new Date().toISOString().slice(0,10);const inScope=i
   let md=`# 책 뼈대 — 입력 내용 (${ds})${SCOPE.length?' · 부분: '+scopeLabel():''}\n\n`;
   for(const part of BOOK){const items=part.items.filter(it=>inScope(it.id));if(!items.length)continue;md+=`## ${strip(part.title)}${part.pages?' ('+part.pages+')':''}\n\n`;if(part.intro)md+=`> ${strip(part.intro)}\n\n`;
     const isWk=/^week[1-4]$/.test(part.id);                                   /* 1~4주차는 팀별로 나눠서 내보냄 */
-    const passes=isWk?WEEK_TEAMS.map(t=>({pfx:teamPfx(t.id),label:t.label})):[{pfx:'',label:''}];
+    const passes=isWk?teamsOf(part.id).map(t=>({pfx:teamPfx(t.id),label:t.label})):[{pfx:'',label:''}];
     for(const pass of passes){ if(isWk)md+=`### 〔${pass.label}〕\n\n`;
       for(const item of items){md+=`${isWk?'#### ':'### '}${strip(item.title)}\n\n`;if(item.spec)md+=`_${strip(item.spec)}_\n\n`;
         for(const f of item.fields){const v=(DATA[pass.pfx+key(item,f)]!==undefined?DATA[pass.pfx+key(item,f)]:(f.def||'')).trim();
