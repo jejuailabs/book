@@ -149,6 +149,29 @@
   .lrow .ll a{color:var(--navy)}
   .lrow .lp{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .lrow.rv{background:rgba(217,103,58,.08)}
+  /* 수정 이력 */
+  .f{position:relative}
+  .hbtn{position:absolute;top:0;right:0;font:inherit;font-size:10px;line-height:1;padding:2px 6px;border:1px solid var(--line);border-radius:6px;background:transparent;color:var(--muted);cursor:pointer;opacity:.55}
+  .f:hover .hbtn,.f:focus-within .hbtn{opacity:1}
+  .hbtn:hover{border-color:var(--terra);color:var(--terra)}
+  .vbtn{font:inherit;font-size:11px;padding:0 6px;margin-right:6px;border:1px solid var(--terra);border-radius:6px;background:transparent;color:var(--terra);cursor:pointer}
+  .lbtn.ghost{background:transparent;color:var(--terra)}
+  .vmodal{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.45);display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;overflow:auto}
+  .vmodal[hidden]{display:none}
+  .vbox{background:var(--panel);color:var(--ink);border-radius:14px;max-width:760px;width:100%;padding:16px 18px;box-shadow:0 8px 30px rgba(0,0,0,.35)}
+  .vhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+  .vhead button{font:inherit;font-size:13px;padding:4px 12px;border:1px solid var(--line);border-radius:8px;background:var(--paper);color:var(--ink);cursor:pointer}
+  .vmeta{font-size:13px;color:var(--muted);margin-bottom:8px;line-height:1.5}
+  .vdiff{white-space:pre-wrap;word-break:break-all;font-size:13.5px;line-height:1.7;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:6px 0 10px;max-height:50vh;overflow:auto}
+  .vdiff del{background:rgba(248,113,113,.25);color:#b91c1c;text-decoration:line-through}
+  .vdiff ins{background:rgba(94,156,138,.3);color:#166534;text-decoration:none}
+  .vact{display:flex;flex-wrap:wrap;gap:6px}
+  .vrow{display:grid;grid-template-columns:70px 84px 44px 1fr;gap:8px;width:100%;text-align:left;font:inherit;font-size:13px;padding:7px 6px;border:0;border-bottom:1px dashed var(--line);background:transparent;color:var(--ink);cursor:pointer}
+  .vrow:hover{background:var(--paper)}
+  .vrow .lp{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .vrow .lw.cl{color:var(--terra);font-weight:700}
+  .vrow .la{font-size:11px;font-weight:700;text-align:center;border-radius:6px;background:var(--line)}
+  @media print{.hbtn,.vmodal{display:none!important}}
   @media(max-width:640px){.lrow{grid-template-columns:40px 1fr 40px}.lrow .ll,.lrow .lp{grid-column:1/-1;white-space:normal}}
   .tmatrix .th{font-size:11px;color:var(--muted);text-align:center;font-weight:700}
   .tmatrix .th:first-child{text-align:left}
@@ -716,7 +739,7 @@ function field(item,f,extraCls,pfx){
   const inp=f.type==='area'
     ?`<textarea id="f-${k}" data-k="${k}" placeholder="${esc(ph)}">${esc(v)}</textarea>`
     :`<input type="text" id="f-${k}" data-k="${k}" value="${esc(v)}" placeholder="${esc(ph)}">`;
-  return `<div class="f${String(v).trim()?' filled':''}${extraCls?' '+extraCls:''}"><label for="f-${k}">${f.label}</label>${inp}</div>`;
+  return `<div class="f${String(v).trim()?' filled':''}${extraCls?' '+extraCls:''}"><label for="f-${k}">${f.label}</label><button type="button" class="hbtn" data-hist="${k}" title="이 칸의 수정 이력">이력</button>${inp}</div>`;
 }
 function itemBlock(item, keys, pfx){
   const P=pfx||'';
@@ -937,8 +960,8 @@ function rerenderSlide(sid){const s=SLIDES.find(x=>x.id===sid);const old=documen
 function touch(){dirty=true;setStatus('저장 안 됨','dirty');scheduleLocal()}
 document.addEventListener('click',e=>{
   const add=e.target.closest('[data-add]');if(add){const id='x-'+add.dataset.add+'-'+uid();DATA[id+'.title']='';DATA[id+'.text']='';touch();rerenderSlide(add.dataset.add);const el=document.getElementById('f-'+id+'.title');if(el){el.scrollIntoView({block:'center'});el.focus()}return}
-  const del=e.target.closest('[data-del]');if(del){const id=del.dataset.del;const t=(DATA[id+'.title']||'').trim();if(!confirm(`추가 항목${t?' "'+t+'"':''}을 지울까요?`))return;addLog('삭제','',keyLoc(id+'.title').loc.replace(/ › 항목 이름$/,''),t||DATA[id+'.text']||'');delete DATA[id+'.title'];delete DATA[id+'.text'];touch();rerenderSlide(slideOf(id));return}
-  const cd=e.target.closest('[data-cdel]');if(cd){const id=cd.dataset.cdel;if(!confirm('이 의견을 지울까요?'))return;addLog('삭제','',(SHORT[slideOf(id)]||'')+' › 의견',(DATA[id+'.who']?DATA[id+'.who']+': ':'')+(DATA[id+'.text']||''));for(const k of ['who','text','time','ref'])delete DATA[id+'.'+k];touch();rerenderSlide(slideOf(id));return}
+  const del=e.target.closest('[data-del]');if(del){const id=del.dataset.del;const t=(DATA[id+'.title']||'').trim();if(!confirm(`추가 항목${t?' "'+t+'"':''}을 지울까요?`))return;recordChange('','항목 이름: '+t+'\n'+(DATA[id+'.text']||''),'',{a:'삭제',loc:keyLoc(id+'.title').loc.replace(/ › 항목 이름$/,'')});delete DATA[id+'.title'];delete DATA[id+'.text'];touch();rerenderSlide(slideOf(id));return}
+  const cd=e.target.closest('[data-cdel]');if(cd){const id=cd.dataset.cdel;if(!confirm('이 의견을 지울까요?'))return;recordChange('',(DATA[id+'.who']?DATA[id+'.who']+': ':'')+(DATA[id+'.text']||''),'',{a:'삭제',loc:(SHORT[slideOf(id)]||'')+' › 의견'});for(const k of ['who','text','time','ref'])delete DATA[id+'.'+k];touch();rerenderSlide(slideOf(id));return}
 });
 /* 대시보드 → 특정 탭으로 바로 이동 (개인별 카드 등) */
 document.addEventListener('click',e=>{const j=e.target.closest('[data-jump]');if(!j)return;e.preventDefault();const sid=j.dataset.jump,tid=j.dataset.jtab;
@@ -1140,6 +1163,7 @@ function subscribeCloud(){
     const remote = (snap.data() && snap.data().d) || {};
     if (firstSnapshot) {
       firstSnapshot = false;
+      ensureDailySnap(remote);
       const localCount = Object.keys(DATA).filter(k => String(DATA[k] || '').trim() !== '').length;
       if (localCount === 0 && Object.keys(remote).length > 0) {
         DATA = Object.assign({}, remote);
@@ -1193,15 +1217,15 @@ function initCloud(){
 /* ============ 수정 로그 (Firestore bookData/log-YYYY-MM 월별 문서의 e 배열에 쌓음) ============ */
 /* 칸을 고치고 빠져나올 때(change) 한 줄씩 기록. 사람·Claude 모두 같은 로그. ?by=Claude 로 연 탭은 작성자가 Claude로 남는다 */
 const LOGPAGE={id:'log',title:'수정 로그',logpage:true};
-const LOG_ACT=['추가','수정','삭제','의견','구조','검토','메모'];
+const LOG_ACT=['추가','수정','삭제','되돌림','의견','구조','검토','메모'];
 let LOGS=[], logUnsub=null, LF={who:'',a:'',from:''};
 let ACTOR=''; try{const q=new URLSearchParams(location.search).get('by');if(q)sessionStorage.setItem('bookActor',q);ACTOR=sessionStorage.getItem('bookActor')||''}catch(e){}
 function logWho(){return ACTOR||(cloudUser?(cloudUser.displayName||cloudUser.email||''):'')}
 function logDocId(t){const d=new Date(t);return 'log-'+d.getFullYear()+'-'+pad(d.getMonth()+1)}
-async function addLog(a,k,loc,p,max){
+async function addLog(a,k,loc,p,max,extra){
   if(!cloudReady||!cloudUser||!cloudDb||SCOPE.length)return false;
   const t=Date.now();
-  const e={id:uid(),t,a,who:logWho(),uid:cloudUser.uid,k:k||'',loc:loc||'',p:String(p||'').replace(/\s+/g,' ').trim().slice(0,max||120)};
+  const e=Object.assign({id:uid(),t,a,who:logWho(),uid:cloudUser.uid,k:k||'',loc:loc||'',p:String(p||'').replace(/\s+/g,' ').trim().slice(0,max||120)},extra||{});
   try{await cloudDb.doc('bookData/'+logDocId(t)).set({e:firebase.firestore.FieldValue.arrayUnion(e)},{merge:true});return true}
   catch(err){console.error(err);setStatus('로그 저장 실패','dirty');return false}
 }
@@ -1223,21 +1247,126 @@ const ORIG={};
 document.addEventListener('focusin',e=>{const el=e.target;if(el.dataset&&el.dataset.k)ORIG[el.dataset.k]=el.value});
 document.addEventListener('change',e=>{const el=e.target;if(!el.dataset||!el.dataset.k)return;const k=el.dataset.k;
   const before=k in ORIG?ORIG[k]:'',after=el.value;ORIG[k]=after;if(before===after)return;
-  const a=!before.trim()?'추가':(!after.trim()?'삭제':'수정');addLog(a,k,keyLoc(k).loc,after.trim()?after:before)});
+  recordChange(k,before,after)});
+/* 칸에 커서를 둔 채 창을 닫거나 다른 탭으로 가도 버전이 남도록 */
+function flushActive(){const el=document.activeElement;if(!el||!el.dataset||!el.dataset.k)return;const k=el.dataset.k;
+  const b=k in ORIG?ORIG[k]:'';if(b===el.value)return;ORIG[k]=el.value;recordChange(k,b,el.value);if(dirty)cloudPush()}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')flushActive()});
+window.addEventListener('pagehide',flushActive);
+
+/* ============ 수정 이력 (버전) — 깃 커밋처럼 수정 전·후 전체 내용을 bookData/v-… 문서 하나씩에 저장 ============ */
+const VCACHE={};
+async function recordChange(k,before,after,opt){
+  opt=opt||{};before=String(before??'');after=String(after??'');
+  if(!cloudReady||!cloudUser||!cloudDb||SCOPE.length)return false;
+  const a=opt.a||(!before.trim()?'추가':(!after.trim()?'삭제':'수정'));
+  const t=Date.now(),vid='v-'+t.toString(36)+'-'+Math.random().toString(36).slice(2,6);
+  const loc=opt.loc||(k?keyLoc(k).loc:'');
+  const v={t,k:k||'',a,who:logWho(),uid:cloudUser.uid,before,after,loc};
+  try{await cloudDb.doc('bookData/'+vid).set(v);VCACHE[vid]=v}catch(err){console.error(err);setStatus('이력 저장 실패','dirty');return addLog(a,k,loc,after.trim()?after:before)}
+  return addLog(a,k,loc,after.trim()?after:before,120,{v:vid});
+}
+/* 단어 단위 비교 (앞뒤 같은 부분은 잘라 내고 가운데만 LCS) → [['=',글],['-',글],['+',글]...] */
+function diffOps(a,b){
+  const A=String(a).match(/\s+|[^\s]+/g)||[],B=String(b).match(/\s+|[^\s]+/g)||[];
+  let p=0;while(p<A.length&&p<B.length&&A[p]===B[p])p++;
+  let s=0;while(s<A.length-p&&s<B.length-p&&A[A.length-1-s]===B[B.length-1-s])s++;
+  const a1=A.slice(p,A.length-s),b1=B.slice(p,B.length-s),ops=[];
+  const push=(o,t)=>{if(!t)return;const L=ops[ops.length-1];if(L&&L[0]===o)L[1]+=t;else ops.push([o,t])};
+  push('=',A.slice(0,p).join(''));
+  const n=a1.length,m=b1.length;
+  if(!n||!m||n*m>4e6){push('-',a1.join(''));push('+',b1.join(''))}
+  else{const dp=Array.from({length:n+1},()=>new Uint16Array(m+1));
+    for(let i=n-1;i>=0;i--)for(let j=m-1;j>=0;j--)dp[i][j]=a1[i]===b1[j]?dp[i+1][j+1]+1:Math.max(dp[i+1][j],dp[i][j+1]);
+    let i=0,j=0;while(i<n&&j<m){if(a1[i]===b1[j]){push('=',a1[i]);i++;j++}else if(dp[i+1][j]>=dp[i][j+1])push('-',a1[i++]);else push('+',b1[j++])}
+    while(i<n)push('-',a1[i++]);while(j<m)push('+',b1[j++])}
+  push('=',A.slice(A.length-s).join(''));return ops;
+}
+const diffHtml=(a,b)=>diffOps(a,b).map(([o,t])=>o==='='?esc(t):o==='-'?`<del>${esc(t)}</del>`:`<ins>${esc(t)}</ins>`).join('');
+/* Claude용 짧은 비교: 바뀐 곳과 앞뒤 일부만. [-지운 글-] {+넣은 글+} */
+function compactDiff(a,b){
+  const ops=diffOps(a,b);let out='';
+  ops.forEach(([o,t],i)=>{if(o==='-')out+=`[-${t}-]`;else if(o==='+')out+=`{+${t}+}`;
+    else if(t.length<=90)out+=t;else out+=(i>0?t.slice(0,40):'')+' … '+(i<ops.length-1?t.slice(-40):'')});
+  const added=ops.filter(o=>o[0]==='+').reduce((n,o)=>n+o[1].length,0);
+  return added>b.length*0.6?'(대부분 바뀜 · 현재 전체)\n'+b:out;
+}
 function fmtT(t){const d=new Date(t);return (d.getMonth()+1)+'/'+d.getDate()+' '+pad(d.getHours())+':'+pad(d.getMinutes())}
 const lastReview=()=>LOGS.find(e=>e.a==='검토');
-/* Claude용 보기: 마지막 '검토' 기록 이후 바뀐 칸만, 칸마다 최신 값 하나 */
+/* Claude용 보기: 마지막 '검토' 기록 이후 바뀐 칸만. 새로 쓴 칸은 전체, 고친 칸은 검토 시점 대비 바뀐 부분만 */
 function sinceReview(){const rv=lastReview(),since=rv?rv.t:0,latest={},notes=[];
-  for(const e of LOGS){if(e.t<=since)break;if(e.k&&/^(추가|수정|삭제)$/.test(e.a)){if(!latest[e.k])latest[e.k]=e}else notes.push(e)}
+  for(const e of LOGS){if(e.t<=since)break;if(e.k&&/^(추가|수정|삭제|되돌림)$/.test(e.a)){if(!latest[e.k])latest[e.k]=e}else notes.push(e)}
   return {rv,latest,notes}}
-function claudeView(){
-  const {rv,latest,notes}=sinceReview();const ks=Object.keys(latest).reverse();
-  let s=`[Claude용] 기준: ${rv?fmtT(rv.t)+' 검토('+rv.who+') 이후':'검토 기록 없음 → 로그 전체'} · 바뀐 칸 ${ks.length}개 · 기타 기록 ${notes.length}건\n`;
-  for(const k of ks){const e=latest[k];const v=String(DATA[k]!==undefined?DATA[k]:'').trim();s+=`\n■ ${keyLoc(k).loc} [${e.a} ${fmtT(e.t)} ${e.who}] key=${k}\n${v||'(비어 있음)'}\n`}
+async function claudeView(){
+  const {rv,latest,notes}=sinceReview(),since=rv?rv.t:0,ks=Object.keys(latest).reverse(),base={};
+  try{if(cloudDb&&ks.length){const qs=await cloudDb.collection('bookData').where('t','>',since).get();const vs=[];
+    qs.forEach(d=>{const x=d.data();if(x&&typeof x.before==='string'){vs.push(x);VCACHE[d.id]=x}});
+    vs.sort((a,b)=>a.t-b.t);for(const v of vs)if(v.k&&!(v.k in base))base[v.k]=v.before}}catch(err){console.error(err)}
+  let s=`[Claude용] 기준: ${rv?fmtT(rv.t)+' 검토('+rv.who+') 이후':'검토 기록 없음 → 로그 전체'} · 바뀐 칸 ${ks.length}개 · 기타 기록 ${notes.length}건\n표기: [-지운 글-] {+넣은 글+} · 새로 쓴 칸은 전체\n`;
+  for(const k of ks){const e=latest[k],cur=String(DATA[k]??''),b=base[k];let body,tag;
+    if(b===undefined){tag='전체';body=cur.trim()||'(비어 있음)'}
+    else if(!b.trim()){tag='새로 씀';body=cur.trim()||'(비어 있음)'}
+    else if(!cur.trim()){tag='삭제됨';body='이전 내용: '+b.trim().slice(0,300)+(b.trim().length>300?' …':'')}
+    else if(b===cur){tag='원래대로';body='(검토 시점과 같음)'}
+    else{tag='고침';body=compactDiff(b,cur)}
+    s+=`\n■ ${keyLoc(k).loc} [${tag} · ${e.a} ${fmtT(e.t)} ${e.who}] key=${k}\n${body}\n`}
   if(notes.length){s+='\n― 기타 기록 ―\n';for(const e of notes.slice().reverse())s+=`- ${fmtT(e.t)} ${e.who} [${e.a}] ${e.loc}${e.p?': '+e.p:''}\n`}
   return s;
 }
 window.claudeView=claudeView;
+/* 버전 보기 · 되돌리기 창 */
+function vmodal(){let m=document.getElementById('vmodal');if(!m){m=document.createElement('div');m.id='vmodal';m.className='vmodal';m.hidden=true;
+  m.innerHTML=`<div class="vbox"><div class="vhead"><b id="vmTitle"></b><button type="button" data-vclose>닫기</button></div><div id="vmBody"></div></div>`;document.body.appendChild(m)}return m}
+function vOpen(title,body){const m=vmodal();m.querySelector('#vmTitle').textContent=title;m.querySelector('#vmBody').innerHTML=body;m.hidden=false}
+async function getVersion(vid){if(VCACHE[vid])return VCACHE[vid];const s=await cloudDb.doc('bookData/'+vid).get();if(!s.exists)return null;return VCACHE[vid]=s.data()}
+async function openVersion(vid){
+  if(!cloudDb){alert('로그인해야 이력을 볼 수 있습니다.');return}
+  vOpen('불러오는 중…','');const v=await getVersion(vid);if(!v){vOpen('이력 없음','<div class="empty">이 기록의 이력을 찾지 못했습니다.</div>');return}
+  const cur=v.k?String(DATA[v.k]??''):null;
+  let h=`<div class="vmeta">${fmtT(v.t)} · <b>${esc(v.who)}</b> · ${esc(v.a)}<br>${esc(v.loc)}</div>`;
+  h+=`<div class="lsub" style="margin:0">빨강 취소선 = 지운 글 · 초록 = 넣은 글</div><div class="vdiff">${diffHtml(v.before,v.after)||'<span class="empty">(내용 없음)</span>'}</div>`;
+  h+=`<details><summary>수정 전 전체</summary><pre class="cview">${esc(v.before)||'(비어 있음)'}</pre></details><details><summary>수정 후 전체</summary><pre class="cview">${esc(v.after)||'(비어 있음)'}</pre></details>`;
+  if(v.k){h+=`<div class="lsub" style="margin:10px 0 6px">지금 칸 내용: ${cur===v.after?'이 수정 직후와 같음':cur===v.before?'이 수정 전과 같음':'이후에 다시 바뀜'}</div>
+    <div class="vact"><button type="button" class="lbtn" data-vrevert="${vid}" data-which="before">수정 전 내용으로 되돌리기</button> <button type="button" class="lbtn ghost" data-vrevert="${vid}" data-which="after">이 수정 후 내용으로 맞추기</button> <button type="button" class="lbtn ghost" data-hist="${esc(v.k)}">이 칸 전체 이력</button></div>`}
+  vOpen('수정 이력 보기',h);
+}
+async function openHistory(k){
+  if(!cloudDb||!cloudUser){alert('로그인해야 이력을 볼 수 있습니다.');return}
+  vOpen('불러오는 중…','');const vs=[];
+  try{const qs=await cloudDb.collection('bookData').where('k','==',k).get();qs.forEach(d=>{const x=d.data();if(x&&typeof x.before==='string'){VCACHE[d.id]=x;vs.push([d.id,x])}})}catch(err){console.error(err)}
+  vs.sort((a,b)=>b[1].t-a[1].t);
+  let h=`<div class="vmeta">${esc(keyLoc(k).loc)}</div>`;
+  if(!vs.length)h+=`<div class="empty">아직 이력이 없습니다. (이력은 기능을 켠 뒤부터 쌓입니다)</div>`;
+  for(const [id,v] of vs)h+=`<button type="button" class="vrow" data-v="${id}"><span class="lt">${fmtT(v.t)}</span><span class="lw${v.who==='Claude'?' cl':''}">${esc(v.who)}</span><span class="la" data-a="${esc(v.a)}">${esc(v.a)}</span><span class="lp">${esc(String(v.after||v.before).replace(/\s+/g,' ').slice(0,70))}</span></button>`;
+  vOpen('이 칸의 수정 이력 · '+vs.length+'건',h);
+}
+function setFieldValue(k,v){DATA[k]=v;ORIG[k]=v;const el=document.querySelector(`[data-k="${CSS.escape(k)}"]`);
+  if(el){el.value=v;if(el.tagName==='TEXTAREA')autoGrow(el)}touch();refresh()}
+document.addEventListener('click',async e=>{
+  const vb=e.target.closest('[data-v]');if(vb){e.preventDefault();openVersion(vb.dataset.v);return}
+  const hb=e.target.closest('[data-hist]');if(hb){e.preventDefault();openHistory(hb.dataset.hist);return}
+  const m=document.getElementById('vmodal');if(m&&!m.hidden&&(e.target.closest('[data-vclose]')||e.target===m)){m.hidden=true;return}
+  const rb=e.target.closest('[data-vrevert]');if(!rb)return;
+  const v=VCACHE[rb.dataset.vrevert];if(!v||!v.k)return;const val=rb.dataset.which==='after'?v.after:v.before,cur=String(DATA[v.k]??'');
+  if(cur===val){alert('지금 칸 내용과 이미 같습니다.');return}
+  if(!confirm(`"${keyLoc(v.k).loc}" 칸을 ${rb.dataset.which==='after'?'이 수정 직후':'이 수정 전'} 내용으로 바꿀까요?\n지금 내용도 이력에 남아서 다시 되돌릴 수 있습니다.`))return;
+  setFieldValue(v.k,val);await recordChange(v.k,cur,val,{a:'되돌림'});m.hidden=true;setStatus('되돌림 완료');
+});
+/* 하루 한 번 전체 백업: 그날 처음 접속한 사람의 접속 시점 상태를 bookData/snap-YYYY-MM-DD 에 */
+async function ensureDailySnap(d){
+  try{const n=new Date(),id='snap-'+n.getFullYear()+'-'+pad(n.getMonth()+1)+'-'+pad(n.getDate());if(load('snap')===id||!cloudDb)return;
+    const ref=cloudDb.doc('bookData/'+id),s=await ref.get();if(!s.exists)await ref.set({day:id.slice(5),at:Date.now(),who:logWho(),d});save('snap',id)}catch(err){console.error(err)}
+}
+async function listSnaps(){
+  const box=document.getElementById('snapList');if(!box)return;if(!cloudDb||!cloudUser){box.innerHTML='<div class="empty">로그인해야 볼 수 있습니다.</div>';return}
+  box.innerHTML='불러오는 중…';const ID=firebase.firestore.FieldPath.documentId(),rows=[];
+  try{const qs=await cloudDb.collection('bookData').where(ID,'>=','snap-').where(ID,'<','snap.').get();qs.forEach(d=>rows.push([d.id,d.data()]))}catch(err){console.error(err)}
+  rows.sort((a,b)=>a[0]<b[0]?1:-1);
+  box.innerHTML=rows.length?rows.map(([id,x])=>`<div class="lrow" style="grid-template-columns:110px 1fr auto"><span><b>${esc(x.day||id)}</b></span><span class="lp">${x.at?fmtT(x.at):''} · ${esc(x.who||'')} 접속 시점</span><button type="button" class="lbtn ghost" data-snapmd="${id}">md 받기</button></div>`).join(''):'<div class="empty">아직 백업이 없습니다.</div>';
+}
+document.addEventListener('click',async e=>{const b=e.target.closest('[data-snapmd]');if(!b)return;const s=await cloudDb.doc('bookData/'+b.dataset.snapmd).get();if(!s.exists)return;
+  const keep=DATA;let md;try{DATA=s.data().d||{};md=buildMd()}finally{DATA=keep}download(md,'책뼈대_백업_'+b.dataset.snapmd.slice(5)+'.md','text/markdown')});
+document.addEventListener('click',e=>{if(e.target.closest('#snapLoad'))listSnaps()});
 function logDashCard(){
   if(SCOPE.length)return'';
   if(!cloudUser)return `<a class="dcard mcell" href="#log"><span class="mn">📜</span><span class="mt">수정 로그 · 로그인하면 보입니다</span></a>`;
@@ -1248,15 +1377,17 @@ function renderLogPage(){
   return `<section class="slide" id="log" data-title="수정 로그"><div class="slide-h"><b>수정 로그 · 날짜·시간별 추가·수정·삭제 기록</b></div><div class="dgrid">
   <div class="dcard"><div class="dh">로그 직접 남기기<span class="lsub">'검토'를 남기면 그 시각이 Claude용 보기의 새 기준점이 됩니다</span></div>
   <form id="logForm" class="lform"><select name="a"><option>메모</option><option>구조</option><option>검토</option></select><input name="loc" placeholder="제목·위치 (예: 사이트 구조 / WEEK 2 검토)"><textarea name="p" placeholder="내용"></textarea><button type="submit">로그 남기기</button></form></div>
-  <div class="logwrap">${logInner()}</div></div></section>`;
+  <div class="logwrap">${logInner()}</div>
+  <div class="dcard"><div class="dh">날짜별 전체 백업<span class="lsub">그날 처음 접속한 사람의 접속 시점 상태를 하루 한 번 통째로 저장</span></div><div id="snapList"></div><button type="button" class="lbtn ghost" id="snapLoad">백업 목록 보기</button></div>
+  </div></section>`;
 }
 function logInner(){
   if(!cloudUser)return `<div class="dcard"><div class="empty">로그인하면 수정 로그가 보입니다.</div></div>`;
   const people=[...new Set(LOGS.map(e=>e.who))],from=LF.from?new Date(LF.from+'T00:00').getTime():0;
   const rows=LOGS.filter(e=>(!LF.who||e.who===LF.who)&&(!LF.a||e.a===LF.a)&&e.t>=from);
   const {rv,latest}=sinceReview();
-  let h=`<div class="dcard"><div class="dh">Claude용 보기<span class="lsub">${rv?fmtT(rv.t)+' 검토 이후':'검토 기록 없음'} 바뀐 칸 ${Object.keys(latest).length}개 · 칸마다 최신 값 하나</span></div>
-  <details><summary>펼쳐 보기</summary><pre class="cview" id="claudeView">${esc(claudeView())}</pre></details><button type="button" class="lbtn" id="cvCopy">복사</button></div>`;
+  let h=`<div class="dcard"><div class="dh">Claude용 보기<span class="lsub">${rv?fmtT(rv.t)+' 검토 이후':'검토 기록 없음'} 바뀐 칸 ${Object.keys(latest).length}개 · 새로 쓴 칸은 전체, 고친 칸은 바뀐 부분만</span></div>
+  <details><summary>펼쳐 보기</summary><pre class="cview" id="claudeView">불러오는 중…</pre></details><button type="button" class="lbtn" id="cvCopy">복사</button></div>`;
   h+=`<div class="dcard"><div class="dh">날짜·시간별 기록<span class="lsub">${rows.length}건</span></div><div class="lfilter">
   <select data-lf="who"><option value="">모든 사람</option>${people.map(p=>`<option${p===LF.who?' selected':''}>${esc(p)}</option>`).join('')}</select>
   <select data-lf="a"><option value="">모든 구분</option>${LOG_ACT.map(a=>`<option${a===LF.a?' selected':''}>${a}</option>`).join('')}</select>
@@ -1266,12 +1397,13 @@ function logInner(){
   for(const e of rows.slice(0,800)){const d=new Date(e.t),dk=`${d.getFullYear()}. ${d.getMonth()+1}. ${d.getDate()} (${'일월화수목금토'[d.getDay()]})`;
     if(dk!==day){day=dk;h+=`<div class="lday">${dk}</div>`}
     let loc=esc(e.loc);if(e.k){const L=keyLoc(e.k);if(L.sid)loc=`<a href="#${L.sid}" data-jump="${L.sid}" data-jtab="${esc(L.tab)}">${loc}</a>`}
-    h+=`<div class="lrow${e.a==='검토'?' rv':''}"><span class="lt">${pad(d.getHours())}:${pad(d.getMinutes())}</span><span class="lw${e.who==='Claude'?' cl':''}" title="${esc(e.who)}">${esc(e.who)}</span><span class="la" data-a="${esc(e.a)}">${esc(e.a)}</span><span class="ll">${loc}</span><span class="lp" title="${esc(e.p)}">${esc(e.p)}</span></div>`}
+    h+=`<div class="lrow${e.a==='검토'?' rv':''}"><span class="lt">${pad(d.getHours())}:${pad(d.getMinutes())}</span><span class="lw${e.who==='Claude'?' cl':''}" title="${esc(e.who)}">${esc(e.who)}</span><span class="la" data-a="${esc(e.a)}">${esc(e.a)}</span><span class="ll">${loc}</span><span class="lp" title="${esc(e.p)}">${e.v?`<button type="button" class="vbtn" data-v="${esc(e.v)}">비교</button>`:''}${esc(e.p)}</span></div>`}
   return h+`</div>`;
 }
-function updateLogPage(){const w=document.querySelector('#log .logwrap');if(!w)return;const op=w.querySelector('details[open]');w.innerHTML=logInner();if(op){const d=w.querySelector('details');if(d)d.open=true}}
+function updateLogPage(){const w=document.querySelector('#log .logwrap');if(!w)return;const op=w.querySelector('details[open]');w.innerHTML=logInner();if(op){const d=w.querySelector('details');if(d)d.open=true}
+  if(cloudUser&&document.querySelector('#log.on'))claudeView().then(t=>{const p=document.getElementById('claudeView');if(p)p.textContent=t})}
 document.addEventListener('change',e=>{const f=e.target.closest('[data-lf]');if(!f)return;LF[f.dataset.lf]=f.value;updateLogPage()});
-document.addEventListener('click',e=>{if(!e.target.closest('#cvCopy'))return;navigator.clipboard.writeText(claudeView()).then(()=>setStatus('Claude용 보기 복사됨'),()=>alert('복사 실패'))});
+document.addEventListener('click',async e=>{if(!e.target.closest('#cvCopy'))return;navigator.clipboard.writeText(await claudeView()).then(()=>setStatus('Claude용 보기 복사됨'),()=>alert('복사 실패'))});
 document.addEventListener('submit',async e=>{const f=e.target.closest('#logForm');if(!f)return;e.preventDefault();
   if(!cloudUser){alert('로그인해야 로그를 남길 수 있습니다.');return}
   const p=f.p.value.trim(),loc=f.loc.value.trim();if(!p&&!loc){f.p.focus();return}
