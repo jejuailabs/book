@@ -156,6 +156,11 @@
   .hbtn:hover{border-color:var(--terra);color:var(--terra)}
   .vbtn{font:inherit;font-size:11px;padding:0 6px;margin-right:6px;border:1px solid var(--terra);border-radius:6px;background:transparent;color:var(--terra);cursor:pointer}
   .lbtn.ghost{background:transparent;color:var(--terra)}
+  .lacts{grid-column:2/-1;display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
+  .lacts .vbtn{font-size:12px;padding:2px 9px;margin:0}
+  .lacts .vbtn.rb{border-color:#b91c1c;color:#b91c1c}
+  .lguide{font-size:12.5px;line-height:1.6;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:8px 12px;margin-bottom:10px}
+  .vact .lbtn.hl{box-shadow:0 0 0 3px rgba(185,28,28,.35)}
   .vmodal{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.45);display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;overflow:auto}
   .vmodal[hidden]{display:none}
   .vbox{background:var(--panel);color:var(--ink);border-radius:14px;max-width:760px;width:100%;padding:16px 18px;box-shadow:0 8px 30px rgba(0,0,0,.35)}
@@ -752,7 +757,7 @@ function field(item,f,extraCls,pfx){
   const inp=f.type==='area'
     ?`<textarea id="f-${k}" data-k="${k}" placeholder="${esc(ph)}">${esc(v)}</textarea>`
     :`<input type="text" id="f-${k}" data-k="${k}" value="${esc(v)}" placeholder="${esc(ph)}">`;
-  return `<div class="f${String(v).trim()?' filled':''}${extraCls?' '+extraCls:''}"><label for="f-${k}">${f.label}</label><button type="button" class="hbtn" data-hist="${k}" title="이 칸의 수정 이력">이력</button>${inp}</div>`;
+  return `<div class="f${String(v).trim()?' filled':''}${extraCls?' '+extraCls:''}"><label for="f-${k}">${f.label}</label><button type="button" class="hbtn" data-hist="${k}" title="이 칸의 수정 이력 (수정 전·후 비교, 되돌리기)">🕘 이력</button>${inp}</div>`;
 }
 function itemBlock(item, keys, pfx){
   const P=pfx||'';
@@ -1412,7 +1417,8 @@ async function openHistory(k){
 function setFieldValue(k,v){DATA[k]=v;ORIG[k]=v;const el=document.querySelector(`[data-k="${CSS.escape(k)}"]`);
   if(el){el.value=v;if(el.tagName==='TEXTAREA')autoGrow(el)}touch();refresh()}
 document.addEventListener('click',async e=>{
-  const vb=e.target.closest('[data-v]');if(vb){e.preventDefault();openVersion(vb.dataset.v);return}
+  const vb=e.target.closest('[data-v]');if(vb){e.preventDefault();await openVersion(vb.dataset.v);
+    if(vb.classList.contains('rb')){const b=document.querySelector('#vmodal [data-which="before"]');if(b){b.classList.add('hl');b.scrollIntoView({block:'center'});b.focus()}}return}
   const hb=e.target.closest('[data-hist]');if(hb){e.preventDefault();openHistory(hb.dataset.hist);return}
   const m=document.getElementById('vmodal');if(m&&!m.hidden&&(e.target.closest('[data-vclose]')||e.target===m)){m.hidden=true;return}
   const rb=e.target.closest('[data-vrevert]');if(!rb)return;
@@ -1443,7 +1449,7 @@ function logDashCard(){
   return `<a class="dcard mcell" href="#log"><span class="mn">📜</span><span class="mt">수정 로그 · ${rv?fmtT(rv.t)+' 검토 이후':'검토 기록 없음'} 바뀐 칸 <b>${n}</b>개 · 기타 ${notes.length}건</span><span class="rn">${last?'최근: '+fmtT(last.t)+' '+esc(last.who)+' · '+esc(last.loc):'아직 기록 없음'}</span></a>`;
 }
 function renderLogPage(){
-  return `<section class="slide" id="log" data-title="수정 로그"><div class="slide-h"><b>수정 로그 · 날짜·시간별 추가·수정·삭제 기록</b></div><div class="dgrid">
+  return `<section class="slide" id="log" data-title="수정 로그"><div class="slide-h"><b>수정 로그 · 원고 수정 이력 (커밋 기록 · 비교 · 되돌리기)</b></div><div class="dgrid">
   <div class="dcard"><div class="dh">로그 직접 남기기<span class="lsub">'검토'를 남기면 그 시각이 Claude용 보기의 새 기준점이 됩니다</span></div>
   <form id="logForm" class="lform"><select name="a"><option>메모</option><option>구조</option><option>검토</option></select><input name="loc" placeholder="제목·위치 (예: 사이트 구조 / WEEK 2 검토)"><textarea name="p" placeholder="내용"></textarea><button type="submit">로그 남기기</button></form></div>
   <div class="logwrap">${logInner()}</div>
@@ -1457,7 +1463,10 @@ function logInner(){
   const {rv,latest}=sinceReview();
   let h=`<div class="dcard"><div class="dh">Claude용 보기<span class="lsub">${rv?fmtT(rv.t)+' 검토 이후':'검토 기록 없음'} 바뀐 칸 ${Object.keys(latest).length}개 · 새로 쓴 칸은 전체, 고친 칸은 바뀐 부분만</span></div>
   <details><summary>펼쳐 보기</summary><pre class="cview" id="claudeView">불러오는 중…</pre></details><button type="button" class="lbtn" id="cvCopy">복사</button></div>`;
-  h+=`<div class="dcard"><div class="dh">날짜·시간별 기록<span class="lsub">${rows.length}건</span></div><div class="lfilter">
+  h+=`<div class="dcard"><div class="dh">수정 이력 (커밋 기록)<span class="lsub">${rows.length}건 · 한 줄 = 한 번의 저장</span></div>
+  <div class="lguide">깃허브 커밋처럼, 칸을 고칠 때마다 <b>수정 전·후 원문 전체</b>가 한 줄씩 저장됩니다.<br>
+  <b>🔍 바뀐 내용 보기</b> — 지운 글은 빨간 취소선, 넣은 글은 초록으로 비교 &nbsp;·&nbsp; <b>↩ 되돌리기</b> — 그 수정 전 내용으로 칸을 되돌림 (되돌린 것도 기록돼서 다시 되돌릴 수 있음) &nbsp;·&nbsp; <b>🕘 이 칸 전체 이력</b> — 그 칸의 모든 버전 목록<br>
+  각 입력 칸 오른쪽 위의 <b>🕘 이력</b> 버튼으로도 같은 기능을 쓸 수 있습니다. (사이트 코드 변경은 GitHub에, 원고 내용 변경은 여기에 기록됩니다)</div><div class="lfilter">
   <select data-lf="who"><option value="">모든 사람</option>${people.map(p=>`<option${p===LF.who?' selected':''}>${esc(p)}</option>`).join('')}</select>
   <select data-lf="a"><option value="">모든 구분</option>${LOG_ACT.map(a=>`<option${a===LF.a?' selected':''}>${a}</option>`).join('')}</select>
   <input type="date" data-lf="from" value="${esc(LF.from)}"> 부터</div>`;
@@ -1466,7 +1475,7 @@ function logInner(){
   for(const e of rows.slice(0,800)){const d=new Date(e.t),dk=`${d.getFullYear()}. ${d.getMonth()+1}. ${d.getDate()} (${'일월화수목금토'[d.getDay()]})`;
     if(dk!==day){day=dk;h+=`<div class="lday">${dk}</div>`}
     let loc=esc(e.loc);if(e.k){const L=keyLoc(e.k);if(L.sid)loc=`<a href="#${L.sid}" data-jump="${L.sid}" data-jtab="${esc(L.tab)}">${loc}</a>`}
-    h+=`<div class="lrow${e.a==='검토'?' rv':''}"><span class="lt">${pad(d.getHours())}:${pad(d.getMinutes())}</span><span class="lw${e.who==='Claude'?' cl':''}" title="${esc(e.who)}">${esc(e.who)}</span><span class="la" data-a="${esc(e.a)}">${esc(e.a)}</span><span class="ll">${loc}</span><span class="lp" title="${esc(e.p)}">${e.v?`<button type="button" class="vbtn" data-v="${esc(e.v)}">비교</button>`:''}${esc(e.p)}</span></div>`}
+    h+=`<div class="lrow${e.a==='검토'?' rv':''}"><span class="lt">${pad(d.getHours())}:${pad(d.getMinutes())}</span><span class="lw${e.who==='Claude'?' cl':''}" title="${esc(e.who)}">${esc(e.who)}</span><span class="la" data-a="${esc(e.a)}">${esc(e.a)}</span><span class="ll">${loc}</span><span class="lp" title="${esc(e.p)}">${esc(e.p)}</span>${e.v?`<span class="lacts"><button type="button" class="vbtn" data-v="${esc(e.v)}" title="수정 전·후를 나란히 비교합니다">🔍 바뀐 내용 보기</button>${e.k?`<button type="button" class="vbtn rb" data-v="${esc(e.v)}" title="비교 화면에서 수정 전 내용으로 되돌릴 수 있습니다">↩ 되돌리기</button><button type="button" class="vbtn" data-hist="${esc(e.k)}" title="이 칸의 모든 수정 기록">🕘 이 칸 전체 이력</button>`:''}</span>`:''}</div>`}
   return h+`</div>`;
 }
 function updateLogPage(){const w=document.querySelector('#log .logwrap');if(!w)return;const op=w.querySelector('details[open]');w.innerHTML=logInner();if(op){const d=w.querySelector('details');if(d)d.open=true}
