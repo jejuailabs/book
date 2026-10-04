@@ -823,7 +823,10 @@ const CHARS=[
   {id:'a',nick:'빛이나',file:'img/characters/char-a.png',desc:'드럼스틱 · 11번 티셔츠',team:'team-health'},
   {id:'b',nick:'루키',file:'img/characters/char-b.png',desc:'모자 · 링 귀걸이',team:'team-health'},
   {id:'c',nick:'파란',file:'img/characters/char-c.png',desc:'안경 · 엄지척',team:'team-health'},
-  {id:'d',nick:'사랑이',file:'img/characters/char-d.png',desc:'선글라스 · 긴 웨이브 머리',team:'team-health'}
+  {id:'d',nick:'사랑이',file:'img/characters/char-d.png',desc:'선글라스 · 긴 웨이브 머리',team:'team-health'},
+  {id:'e',nick:'펀제주',file:'img/characters/char-hero-funjeju.png',desc:'모자 · 둥근 안경 · 노트북',team:'team-hero'},
+  {id:'f',nick:'튼이맘',file:'img/characters/char-hero-tunimam.png',desc:'투명 안경 · 감귤색 휴대폰',team:'team-hero'},
+  {id:'g',nick:'햇쌀충전',file:'img/characters/char-hero-haetssal.png',desc:'뿔테 안경 · 두 손 모으기',team:'team-hero'}
 ];
 const isImgVal=v=>/\.(png|jpe?g|webp|gif)$/i.test(v)||/^https?:\/\//.test(v);
 function charOwner(file){for(let i=1;i<=11;i++){const n=pad(i);if(String(DATA['player'+n+'.img']||'').trim()===file)return n}return ''}
