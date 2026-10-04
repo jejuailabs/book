@@ -1013,8 +1013,8 @@ function rerenderSlide(sid){const s=SLIDES.find(x=>x.id===sid);const old=documen
 function touch(){dirty=true;setStatus('저장 안 됨','dirty');scheduleLocal()}
 document.addEventListener('click',e=>{
   const add=e.target.closest('[data-add]');if(add){const id='x-'+add.dataset.add+'-'+uid();DATA[id+'.title']='';DATA[id+'.text']='';touch();rerenderSlide(add.dataset.add);const el=document.getElementById('f-'+id+'.title');if(el){el.scrollIntoView({block:'center'});el.focus()}return}
-  const del=e.target.closest('[data-del]');if(del){const id=del.dataset.del;const t=(DATA[id+'.title']||'').trim();if(!confirm(`추가 항목${t?' "'+t+'"':''}을 지울까요?`))return;recordChange('','항목 이름: '+t+'\n'+(DATA[id+'.text']||''),'',{a:'삭제',loc:keyLoc(id+'.title').loc.replace(/ › 항목 이름$/,'')});delete DATA[id+'.title'];delete DATA[id+'.text'];touch();rerenderSlide(slideOf(id));return}
-  const cd=e.target.closest('[data-cdel]');if(cd){const id=cd.dataset.cdel;if(!confirm('이 의견을 지울까요?'))return;recordChange('',(DATA[id+'.who']?DATA[id+'.who']+': ':'')+(DATA[id+'.text']||''),'',{a:'삭제',loc:(SHORT[slideOf(id)]||'')+' › 의견'});for(const k of ['who','text','time','ref'])delete DATA[id+'.'+k];touch();rerenderSlide(slideOf(id));return}
+  const del=e.target.closest('[data-del]');if(del){const id=del.dataset.del;const t=(DATA[id+'.title']||'').trim();if(!confirm(`추가 항목${t?' "'+t+'"':''}을 지울까요?`))return;recordChange('','항목 이름: '+t+'\n'+(DATA[id+'.text']||''),'',{a:'삭제',loc:keyLoc(id+'.title').loc.replace(/ › 항목 이름$/,'')});delete DATA[id+'.title'];delete DATA[id+'.text'];cloudDeleteKeys([id+'.title',id+'.text']);touch();rerenderSlide(slideOf(id));return}
+  const cd=e.target.closest('[data-cdel]');if(cd){const id=cd.dataset.cdel;if(!confirm('이 의견을 지울까요?'))return;recordChange('',(DATA[id+'.who']?DATA[id+'.who']+': ':'')+(DATA[id+'.text']||''),'',{a:'삭제',loc:(SHORT[slideOf(id)]||'')+' › 의견'});for(const k of ['who','text','time','ref'])delete DATA[id+'.'+k];cloudDeleteKeys(['who','text','time','ref'].map(k=>id+'.'+k));touch();rerenderSlide(slideOf(id));return}
 });
 /* 대시보드 → 특정 탭으로 바로 이동 (개인별 카드 등) */
 document.addEventListener('click',e=>{const j=e.target.closest('[data-jump]');if(!j)return;e.preventDefault();const sid=j.dataset.jump,tid=j.dataset.jtab;
@@ -1187,7 +1187,19 @@ async function cloudPush(){
     setStatus('저장됨 ' + new Date().toLocaleTimeString());
   } catch (err) { console.error(err); setStatus(err && err.code === 'permission-denied' ? '권한 없음: 로그인·규칙 확인' : '클라우드 저장 실패', 'dirty'); }
 }
+/* 삭제 반영: set(merge)로는 지운 키가 클라우드에 남으므로, 지울 때는 그 키를 직접 지운다 */
+let lastRemoteKeys = null;
+async function cloudDeleteKeys(keys){
+  if (!cloudReady || !cloudUser || !cloudRef || !keys.length) return;
+  const args = []; for (const k of keys) args.push(new firebase.firestore.FieldPath('d', k), firebase.firestore.FieldValue.delete());
+  try { await cloudRef.update(...args); } catch (err) { console.error(err); setStatus('클라우드 삭제 실패', 'dirty'); }
+}
 function applyRemoteData(remote){
+  /* 다른 사람이 지운 키(직전 스냅샷엔 있었는데 이번엔 없는 키)는 내 화면에서도 지운다 */
+  let removed = 0;
+  if (lastRemoteKeys) for (const k of lastRemoteKeys) if (!(k in remote) && k in DATA) { delete DATA[k]; removed++; }
+  lastRemoteKeys = new Set(Object.keys(remote));
+  if (removed) { render(); show(cur, false); }
   applyingRemote = true;
   try {
     const activeK = (document.activeElement && document.activeElement.dataset && document.activeElement.dataset.k) || null;
@@ -1216,6 +1228,7 @@ function subscribeCloud(){
     const remote = (snap.data() && snap.data().d) || {};
     if (firstSnapshot) {
       firstSnapshot = false;
+      lastRemoteKeys = new Set(Object.keys(remote));
       ensureDailySnap(remote);
       const localCount = Object.keys(DATA).filter(k => String(DATA[k] || '').trim() !== '').length;
       if (localCount === 0 && Object.keys(remote).length > 0) {
