@@ -181,6 +181,7 @@
   .charfig figcaption b{display:block;font-size:13px;color:var(--navy)}
   .charfig figcaption span{display:block;color:var(--muted);font-size:11px}
   .charfig select{margin-top:4px;width:100%;font:inherit;font-size:11px;padding:3px;border:1px solid var(--line);border-radius:6px;background:var(--paper);color:var(--ink)}
+  .charph{width:100%;aspect-ratio:1;border-radius:50%;border:2px dashed var(--line);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--muted);line-height:1.4}
   .charcircle{overflow:hidden;padding:0;background:radial-gradient(circle at 50% 40%,#fff 0,#F3EDE3 70%)}
   .charcircle img{width:100%;height:100%;object-fit:cover}
   @media print{.charfig select,.chars .lsub{display:none}}
@@ -819,30 +820,43 @@ function renderPlayer(it, n){
 }
 /* ============ 캐릭터 이미지 (img/characters/) — 팀 결과물 페이지에 모아 두고, 누구인지 고르면 플레이어 카드에도 들어감 ============ */
 const CHARS=[
-  {id:'a',file:'img/characters/char-a.png',desc:'드럼스틱 · 11번 티셔츠',team:'team-health'},
-  {id:'b',file:'img/characters/char-b.png',desc:'모자 · 링 귀걸이',team:'team-health'},
-  {id:'c',file:'img/characters/char-c.png',desc:'안경 · 엄지척',team:'team-health'},
-  {id:'d',file:'img/characters/char-d.png',desc:'선글라스 · 긴 웨이브 머리',team:'team-health'}
+  {id:'a',nick:'빛이나',file:'img/characters/char-a.png',desc:'드럼스틱 · 11번 티셔츠',team:'team-health'},
+  {id:'b',nick:'루키',file:'img/characters/char-b.png',desc:'모자 · 링 귀걸이',team:'team-health'},
+  {id:'c',nick:'파란',file:'img/characters/char-c.png',desc:'안경 · 엄지척',team:'team-health'},
+  {id:'d',nick:'사랑이',file:'img/characters/char-d.png',desc:'선글라스 · 긴 웨이브 머리',team:'team-health'}
 ];
 const isImgVal=v=>/\.(png|jpe?g|webp|gif)$/i.test(v)||/^https?:\/\//.test(v);
 function charOwner(file){for(let i=1;i<=11;i++){const n=pad(i);if(String(DATA['player'+n+'.img']||'').trim()===file)return n}return ''}
 function charCircle(it){const v=String(DATA[it.id+'.img']||'').trim();
   return isImgVal(v)?`<div class="circle charcircle" style="width:110px;height:110px;flex:none;border:3px solid #fff"><img src="${esc(v)}" alt="캐릭터 이미지"></div>`
     :`<div class="circle" style="width:110px;height:110px;flex:none;border:3px solid #fff">캐릭터<br>이미지</div>`}
+/* 팀원별 캐릭터 자리: PART 5 팀 '팀원' 칸의 이름 → 같은 닉네임의 플레이어 카드 → 그 카드의 캐릭터 이미지 */
+const playerByNick=nm=>{for(let i=1;i<=11;i++){const n=pad(i);if(String(DATA['player'+n+'.nick']||'').trim()===nm)return n}return ''};
 function charLineup(tid){
-  const cs=CHARS.filter(c=>c.team===tid);if(!cs.length)return'';
-  const opts=n=>`<option value="">— 누구인지 고르기 —</option>`+Array.from({length:11},(_,i)=>{const p=pad(i+1),nm=String(DATA['player'+p+'.nick']||'').trim()||'(빈 카드)';return `<option value="${p}"${p===n?' selected':''}>P${p} ${esc(nm)}</option>`}).join('');
-  return `<div class="chars"><div class="kicker">팀 캐릭터</div><div class="charrow">${cs.map(c=>{const n=charOwner(c.file),nm=n?(String(DATA['player'+n+'.nick']||'').trim()||'P'+n):'';
-    return `<figure class="charfig"><img src="${c.file}" alt="캐릭터 ${c.id.toUpperCase()}" loading="lazy"><figcaption><b>${nm?esc(nm):'캐릭터 '+c.id.toUpperCase()}</b><span>${esc(c.desc)}</span><select data-charpick="${c.file}">${opts(n)}</select></figcaption></figure>`}).join('')}</div>
-    <div class="lsub" style="margin:6px 0 0">누구의 캐릭터인지 고르면 그 사람의 플레이어 카드 '캐릭터 이미지'에도 들어갑니다.</div></div>`;
+  const names=String(DATA[tid+'.members']||'').split(/[,·\/\n]/).map(s=>s.trim()).filter(Boolean);
+  const pool=CHARS.filter(c=>c.team===tid);
+  if(!names.length&&!pool.length)return'';
+  const opts=cur=>`<option value="">— 캐릭터 고르기 —</option>`+CHARS.map(c=>{const o=charOwner(c.file),on=o?(String(DATA['player'+o+'.nick']||'').trim()||'P'+o):'';
+    return `<option value="${c.file}"${c.file===cur?' selected':''}>${esc((c.nick?c.nick+' · ':'')+c.desc)}${on&&c.file!==cur?' (지금: '+esc(on)+')':''}</option>`}).join('');
+  const slots=names.map(nm=>{const n=playerByNick(nm),own=CHARS.find(c=>c.nick===nm),img=n?String(DATA['player'+n+'.img']||'').trim():(own?own.file:'');
+    const pic=isImgVal(img)?`<img src="${esc(img)}" alt="${esc(nm)} 캐릭터" loading="lazy">`:`<div class="charph">캐릭터<br>준비 중</div>`;
+    return `<figure class="charfig">${pic}<figcaption><b>${esc(nm)}</b>${n?`<span>P${n}</span><select data-charfor="${n}">${opts(img)}</select>`:`<span>플레이어 카드 없음</span>`}</figcaption></figure>`}).join('');
+  const free=pool.filter(c=>!charOwner(c.file)&&!names.includes(c.nick));
+  const freeRow=free.length?`<div class="lsub" style="margin:10px 0 4px">아직 주인을 정하지 않은 캐릭터</div><div class="charrow">${free.map(c=>`<figure class="charfig"><img src="${c.file}" alt="캐릭터 ${c.id.toUpperCase()}" loading="lazy"><figcaption><b>캐릭터 ${c.id.toUpperCase()}</b><span>${esc(c.desc)}</span></figcaption></figure>`).join('')}</div>`:'';
+  return `<div class="chars"><div class="kicker">팀 캐릭터</div>${names.length?`<div class="charrow">${slots}</div>`:'<div class="lsub">팀원 칸을 채우면 팀원별 캐릭터 자리가 생깁니다.</div>'}${freeRow}
+    <div class="lsub" style="margin:6px 0 0">캐릭터를 고르면 그 사람의 플레이어 카드 '캐릭터 이미지'에도 들어갑니다.</div></div>`;
 }
-document.addEventListener('change',e=>{const s=e.target.closest('[data-charpick]');if(!s)return;
-  const file=s.dataset.charpick,to=s.value,from=charOwner(file);
-  if(to){const cur=String(DATA['player'+to+'.img']||'').trim();if(cur&&cur!==file&&!confirm(`P${to} 카드에 이미 "${cur}" 이미지가 있습니다. 이 캐릭터로 바꿀까요?\n(이전 값은 이력에 남습니다)`)){s.value=from;return}}
-  if(from&&from!==to){const k='player'+from+'.img';recordChange(k,String(DATA[k]||''),'');setFieldValue(k,'')}
-  if(to){const k='player'+to+'.img',cur=String(DATA[k]||'');if(cur!==file){recordChange(k,cur,file);setFieldValue(k,file)}}
+document.addEventListener('change',e=>{const s=e.target.closest('[data-charfor]');if(!s)return;
+  const to=s.dataset.charfor,file=s.value,k='player'+to+'.img',cur=String(DATA[k]||'').trim();
+  if(cur===file)return;
+  const from=file?charOwner(file):'';
+  if(from&&from!==to){const nm=String(DATA['player'+from+'.nick']||'').trim()||'P'+from;
+    if(!confirm(`이 캐릭터는 지금 ${nm}에게 지정돼 있습니다. 옮길까요?`)){s.value=cur;return}
+    const fk='player'+from+'.img';recordChange(fk,String(DATA[fk]||''),'');setFieldValue(fk,'')}
+  if(cur&&!CHARS.some(c=>c.file===cur)&&!confirm(`P${to} 카드에 이미 "${cur}" 값이 있습니다. 바꿀까요?\n(이전 값은 이력에 남습니다)`)){s.value=cur;return}
+  recordChange(k,String(DATA[k]||''),file);setFieldValue(k,file);
   rerenderSlide('players');rerenderSlide('teams')});
-document.addEventListener('change',e=>{const k=e.target.dataset&&e.target.dataset.k;if(k&&/^player\d\d\.img$/.test(k))setTimeout(()=>{rerenderSlide('players');rerenderSlide('teams')},0)});
+document.addEventListener('change',e=>{const k=e.target.dataset&&e.target.dataset.k;if(k&&/^(player\d\d\.(img|nick)|team-\w+\.members)$/.test(k))setTimeout(()=>{rerenderSlide('players');rerenderSlide('teams')},0)});
 
 /* 장별 추가 항목·의견 모으기 */
 function customItems(sid){const m={};for(const k in DATA){const mm=k.match(/^(x-([a-z0-9]+)-[a-z0-9]+)\.(title|text)$/);if(mm&&mm[2]===sid)(m[mm[1]]=m[mm[1]]||{id:mm[1]})[mm[3]]=DATA[k]}return Object.values(m).sort((a,b)=>a.id<b.id?-1:1)}
