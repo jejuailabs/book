@@ -172,6 +172,18 @@
   .vrow .lw.cl{color:var(--terra);font-weight:700}
   .vrow .la{font-size:11px;font-weight:700;text-align:center;border-radius:6px;background:var(--line)}
   @media print{.hbtn,.vmodal{display:none!important}}
+  /* 캐릭터 */
+  .chars{margin:0 0 14px;padding:10px 12px;border:1px dashed var(--line);border-radius:12px}
+  .charrow{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:10px;margin-top:6px}
+  .charfig{margin:0;text-align:center}
+  .charfig img{width:100%;aspect-ratio:1;object-fit:contain;border-radius:50%;background:radial-gradient(circle at 50% 40%,#fff 0,#F3EDE3 70%)}
+  .charfig figcaption{font-size:12px;line-height:1.35;margin-top:4px}
+  .charfig figcaption b{display:block;font-size:13px;color:var(--navy)}
+  .charfig figcaption span{display:block;color:var(--muted);font-size:11px}
+  .charfig select{margin-top:4px;width:100%;font:inherit;font-size:11px;padding:3px;border:1px solid var(--line);border-radius:6px;background:var(--paper);color:var(--ink)}
+  .charcircle{overflow:hidden;padding:0;background:radial-gradient(circle at 50% 40%,#fff 0,#F3EDE3 70%)}
+  .charcircle img{width:100%;height:100%;object-fit:cover}
+  @media print{.charfig select,.chars .lsub{display:none}}
   @media(max-width:640px){.lrow{grid-template-columns:40px 1fr 40px}.lrow .ll,.lrow .lp{grid-column:1/-1;white-space:normal}}
   .tmatrix .th{font-size:11px;color:var(--muted);text-align:center;font-weight:700}
   .tmatrix .th:first-child{text-align:left}
@@ -792,7 +804,7 @@ function renderPlayer(it, n){
   const stats=[0,1,2,3,4,5].map(i=>parseInt(val(it,f('stat'+i)),10)||0);
   const left=`<div class="pg left sand"><div class="kicker">PART 0 · 실험실의 사람들</div><div class="pnum"><b>${n}</b><span>PLAYER</span></div>
     <div class="spec">${it.spec}</div>
-    <div style="display:flex;gap:14px;align-items:flex-start;margin-top:6px"><div class="circle" style="width:110px;height:110px;flex:none;border:3px solid #fff">캐릭터<br>이미지</div><div style="flex:1">${F('nick')}<div class="g2">${F('real')}${F('team')}</div></div></div>
+    <div style="display:flex;gap:14px;align-items:flex-start;margin-top:6px">${charCircle(it)}<div style="flex:1">${F('nick')}<div class="g2">${F('real')}${F('team')}</div></div></div>
     <div class="g2">${F('age')}${F('home')}${F('job')}${F('interest')}${F('mbti')}${F('img')}</div>
     <div class="card">${F('start')}</div><div class="card">${F('why')}</div><div class="card">${F('worry')}</div>
     <div class="folio">실험실의 사람들 · PLAYER ${n}</div></div>`;
@@ -805,6 +817,33 @@ function renderPlayer(it, n){
     <div class="folio">실험실의 사람들 · STATS</div></div>`;
   return spread(left,right);
 }
+/* ============ 캐릭터 이미지 (img/characters/) — 팀 결과물 페이지에 모아 두고, 누구인지 고르면 플레이어 카드에도 들어감 ============ */
+const CHARS=[
+  {id:'a',file:'img/characters/char-a.png',desc:'드럼스틱 · 11번 티셔츠',team:'team-health'},
+  {id:'b',file:'img/characters/char-b.png',desc:'모자 · 링 귀걸이',team:'team-health'},
+  {id:'c',file:'img/characters/char-c.png',desc:'안경 · 엄지척',team:'team-health'},
+  {id:'d',file:'img/characters/char-d.png',desc:'선글라스 · 긴 웨이브 머리',team:'team-health'}
+];
+const isImgVal=v=>/\.(png|jpe?g|webp|gif)$/i.test(v)||/^https?:\/\//.test(v);
+function charOwner(file){for(let i=1;i<=11;i++){const n=pad(i);if(String(DATA['player'+n+'.img']||'').trim()===file)return n}return ''}
+function charCircle(it){const v=String(DATA[it.id+'.img']||'').trim();
+  return isImgVal(v)?`<div class="circle charcircle" style="width:110px;height:110px;flex:none;border:3px solid #fff"><img src="${esc(v)}" alt="캐릭터 이미지"></div>`
+    :`<div class="circle" style="width:110px;height:110px;flex:none;border:3px solid #fff">캐릭터<br>이미지</div>`}
+function charLineup(tid){
+  const cs=CHARS.filter(c=>c.team===tid);if(!cs.length)return'';
+  const opts=n=>`<option value="">— 누구인지 고르기 —</option>`+Array.from({length:11},(_,i)=>{const p=pad(i+1),nm=String(DATA['player'+p+'.nick']||'').trim()||'(빈 카드)';return `<option value="${p}"${p===n?' selected':''}>P${p} ${esc(nm)}</option>`}).join('');
+  return `<div class="chars"><div class="kicker">팀 캐릭터</div><div class="charrow">${cs.map(c=>{const n=charOwner(c.file),nm=n?(String(DATA['player'+n+'.nick']||'').trim()||'P'+n):'';
+    return `<figure class="charfig"><img src="${c.file}" alt="캐릭터 ${c.id.toUpperCase()}" loading="lazy"><figcaption><b>${nm?esc(nm):'캐릭터 '+c.id.toUpperCase()}</b><span>${esc(c.desc)}</span><select data-charpick="${c.file}">${opts(n)}</select></figcaption></figure>`}).join('')}</div>
+    <div class="lsub" style="margin:6px 0 0">누구의 캐릭터인지 고르면 그 사람의 플레이어 카드 '캐릭터 이미지'에도 들어갑니다.</div></div>`;
+}
+document.addEventListener('change',e=>{const s=e.target.closest('[data-charpick]');if(!s)return;
+  const file=s.dataset.charpick,to=s.value,from=charOwner(file);
+  if(to){const cur=String(DATA['player'+to+'.img']||'').trim();if(cur&&cur!==file&&!confirm(`P${to} 카드에 이미 "${cur}" 이미지가 있습니다. 이 캐릭터로 바꿀까요?\n(이전 값은 이력에 남습니다)`)){s.value=from;return}}
+  if(from&&from!==to){const k='player'+from+'.img';recordChange(k,String(DATA[k]||''),'');setFieldValue(k,'')}
+  if(to){const k='player'+to+'.img',cur=String(DATA[k]||'');if(cur!==file){recordChange(k,cur,file);setFieldValue(k,file)}}
+  rerenderSlide('players');rerenderSlide('teams')});
+document.addEventListener('change',e=>{const k=e.target.dataset&&e.target.dataset.k;if(k&&/^player\d\d\.img$/.test(k))setTimeout(()=>{rerenderSlide('players');rerenderSlide('teams')},0)});
+
 /* 장별 추가 항목·의견 모으기 */
 function customItems(sid){const m={};for(const k in DATA){const mm=k.match(/^(x-([a-z0-9]+)-[a-z0-9]+)\.(title|text)$/);if(mm&&mm[2]===sid)(m[mm[1]]=m[mm[1]]||{id:mm[1]})[mm[3]]=DATA[k]}return Object.values(m).sort((a,b)=>a.id<b.id?-1:1)}
 function comments(sid){const m={};for(const k in DATA){const mm=k.match(/^(c-([a-z0-9]+)-[a-z0-9]+)\.(who|text|time|ref)$/);if(mm&&mm[2]===sid)(m[mm[1]]=m[mm[1]]||{id:mm[1]})[mm[3]]=DATA[k]}return Object.values(m).sort((a,b)=>a.id<b.id?-1:1)}
@@ -859,7 +898,7 @@ function renderSlide(s, idx){
     for(const t of tabs){
       const it=ITEMS[t.id]; let sp='';
       if(s.custom==='player') sp=renderPlayer(it, t.id.slice(-2));
-      else { const L=`<div class="pg left">${itemBlock(it,s.split.left)}<div class="folio">${esc(t.label)}</div></div>`;
+      else { const L=`<div class="pg left">${s.id==='teams'?charLineup(t.id):''}${itemBlock(it,s.split.left)}<div class="folio">${esc(t.label)}</div></div>`;
              const R=`<div class="pg right">${itemBlock(it,s.split.right)}<div class="folio">${esc(t.label)} · 계속</div></div>`; sp=spread(L,R); }
       body+=`<div class="panel${t.id===cur?' on':''}" data-panel="${t.id}">${sp}</div>`;
     }
